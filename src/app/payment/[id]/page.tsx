@@ -1,0 +1,421 @@
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+import { useParams, useRouter } from "next/navigation"
+import Link from "next/link"
+import { Wallet, CreditCard, QrCode, Building2, MapPin, Clock, AlertTriangle, Loader2, CheckCircle2, ExternalLink } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Modal } from "@/components/ui/modal"
+import { formatPrice } from "@/lib/utils"
+import { toast } from "react-toastify"
+import { useT } from "@/hooks/useT"
+
+interface Room {
+  _id: string
+  title: string
+  monthlyRent: number
+  location: string
+  photos: string[]
+}
+
+interface Confirmation {
+  _id: string
+  roomId: Room
+  commission: number
+  paymentStatus: "pending" | "paid" | "overdue"
+  commissionDeadline?: string
+}
+
+interface BankDetail {
+  _id: string
+  bankName: string
+  accountHolderName: string
+  accountNumber: string
+  branch: string
+  qrCodeImage: string
+  isActive: boolean
+}
+
+const ESEWA_FORM_ACTION = "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
+
+export default function PaymentPage() {
+  const params = useParams()
+  const router = useRouter()
+  const { t } = useT()
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [paying, setPaying] = useState(false)
+  const [selectedMethod, setSelectedMethod] = useState("khalti")
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState("")
+  const [showQrModal, setShowQrModal] = useState(false)
+  const [qrPaymentId, setQrPaymentId] = useState("")
+  const [bankDetails, setBankDetails] = useState<BankDetail[]>([])
+  const [showBankModal, setShowBankModal] = useState(false)
+  const [selectedBank, setSelectedBank] = useState<BankDetail | null>(null)
+
+  const generateQrCode = useCallback(async (text: string) => {
+    const QRCode = (await import("qrcode")).default
+    return QRCode.toDataURL(text, { width: 280, margin: 2, color: { dark: "#000000", light: "#ffffff" } })
+  }, [])
+
+  const methods = [
+    { id: "khalti", name: t("payment.khalti"), icon: Wallet },
+    { id: "esewa", name: t("payment.esewa"), icon: CreditCard },
+    { id: "qrcode", name: t("payment.qrCode"), icon: QrCode },
+  ]
+
+  const [deadlineCountdown, setDeadlineCountdown] = useState("")
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/confirm/${params.id}`).then(r => r.ok ? r.json() : Promise.reject()),
+      fetch("/api/bank-details").then(r => r.ok ? r.json() : []),
+    ])
+      .then(([conf, banks]) => {
+        setConfirmation(conf)
+        setBankDetails(banks)
+      })
+      .catch(() => setConfirmation(null))
+      .finally(() => setLoading(false))
+  }, [params.id])
+
+  useEffect(() => {
+    if (!confirmation?.commissionDeadline) return
+    function tick() {
+      const remaining = new Date(confirmation.commissionDeadline!).getTime() - Date.now()
+      if (remaining <= 0) {
+        setDeadlineCountdown("EXPIRED")
+        return
+      }
+      const days = Math.floor(remaining / 86400000)
+      const hours = Math.floor((remaining % 86400000) / 3600000)
+      const minutes = Math.floor((remaining % 3600000) / 60000)
+      setDeadlineCountdown(`${days}d ${hours}h ${minutes}m`)
+    }
+    tick()
+    const interval = setInterval(tick, 60000)
+    return () => clearInterval(interval)
+  }, [confirmation?.commissionDeadline])
+
+  async function handlePay(method?: string) {
+    const payMethod = method || selectedMethod
+    setPaying(true)
+    try {
+      if (payMethod === "qrcode") {
+        const res = await fetch("/api/payment/initiate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmationId: params.id, method: payMethod }),
+        })
+
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || "Payment initiation failed")
+        }
+
+        const data = await res.json()
+        setQrPaymentId(data.paymentId)
+
+        const qrText = `Payment: Rs.${data.amount}\nRef: ${data.paymentId}\nType: Commission`
+        const dataUrl = await generateQrCode(qrText)
+        setQrCodeDataUrl(dataUrl)
+        setShowQrModal(true)
+        return
+      }
+
+      const res = await fetch("/api/payment/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmationId: params.id, method: payMethod }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Payment initiation failed")
+      }
+
+      const data = await res.json()
+
+      if (payMethod === "khalti" && data.paymentUrl) {
+        window.location.href = data.paymentUrl
+      } else if (payMethod === "esewa" && data.esewaConfig) {
+        const form = document.createElement("form")
+        form.method = "POST"
+        form.action = ESEWA_FORM_ACTION
+
+        const fields = data.esewaConfig as Record<string, string>
+        for (const [key, value] of Object.entries(fields)) {
+          const input = document.createElement("input")
+          input.type = "hidden"
+          input.name = key
+          input.value = value
+          form.appendChild(input)
+        }
+
+        document.body.appendChild(form)
+        form.submit()
+        document.body.removeChild(form)
+      } else {
+        throw new Error("Invalid payment response")
+      }
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : t("common.error"))
+    } finally {
+      setPaying(false)
+    }
+  }
+
+  async function handleQrPaid() {
+    try {
+      const res = await fetch("/api/payment/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method: "qrcode", paymentId: qrPaymentId }),
+      })
+      if (res.ok) {
+        toast.success("Payment completed successfully!")
+        setShowQrModal(false)
+        router.push("/student/dashboard")
+      } else {
+        toast.error("Please scan and pay before confirming.")
+      }
+    } catch {
+      toast.error("Verification failed")
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!confirmation) {
+    return (
+      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <p className="text-muted-foreground">{t("common.noData")}</p>
+      </div>
+    )
+  }
+
+  const daysRemaining = confirmation.commissionDeadline
+    ? Math.max(0, Math.floor((new Date(confirmation.commissionDeadline).getTime() - Date.now()) / 86400000))
+    : 0
+
+  return (
+    <div className="mx-auto max-w-lg px-4 py-8 sm:px-6 lg:px-8">
+      <Card>
+        <CardContent className="p-6 space-y-6">
+          <h1 className="text-2xl font-bold">{t("payment.title")}</h1>
+
+          <div className="flex gap-4">
+            {confirmation.roomId?.photos?.[0] && (
+              <img
+                src={confirmation.roomId.photos[0]}
+                alt={confirmation.roomId.title}
+                className="h-20 w-24 rounded-lg object-cover"
+              />
+            )}
+            <div>
+              <h2 className="font-semibold">{confirmation.roomId?.title}</h2>
+              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5">
+                <MapPin className="h-3.5 w-3.5" />
+                {confirmation.roomId?.location}
+              </div>
+              <p className="text-lg font-bold text-primary mt-1">
+                {formatPrice(confirmation.commission)}
+              </p>
+            </div>
+          </div>
+
+          {confirmation.commissionDeadline && (
+            <div className={`rounded-lg border p-3 text-sm ${
+              deadlineCountdown === "EXPIRED"
+                ? "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400"
+                : "border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
+            }`}>
+              <div className="flex items-center gap-2">
+                {deadlineCountdown === "EXPIRED" ? (
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                ) : (
+                  <Clock className="h-4 w-4 shrink-0" />
+                )}
+                <span className="font-medium">
+                  {deadlineCountdown === "EXPIRED"
+                    ? "Payment deadline has passed"
+                    : `Payment due in: ${deadlineCountdown}`
+                  }
+                </span>
+              </div>
+              <p className="mt-1 text-xs opacity-80">
+                Pay within 3 days to avoid losing the booking. You can pay later from your dashboard.
+              </p>
+            </div>
+          )}
+
+          <hr className="border-border" />
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">{t("payment.method")}</p>
+            {methods.map((method) => {
+              const Icon = method.icon
+              return (
+                <button
+                  key={method.id}
+                  onClick={() => {
+                    setSelectedMethod(method.id)
+                    handlePay(method.id)
+                  }}
+                  disabled={paying}
+                  className={`flex w-full items-center gap-4 rounded-lg border p-4 text-left transition-colors hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed ${
+                    selectedMethod === method.id ? "border-primary bg-primary/5" : "border-border"
+                  }`}
+                >
+                  <Icon className="h-6 w-6 text-primary" />
+                  <span className="font-medium">{method.name}</span>
+                  <span className="ml-auto text-sm text-muted-foreground">
+                    {paying && selectedMethod === method.id ? "Processing..." : method.id === "khalti" ? "Pay via Khalti" : method.id === "esewa" ? "Pay via eSewa" : "Scan & Pay"}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          {bankDetails.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Bank Transfer</p>
+              {bankDetails.map((bank) => (
+                <button
+                  key={bank._id}
+                  onClick={() => { setSelectedBank(bank); setShowBankModal(true) }}
+                  className="flex w-full items-center gap-4 rounded-lg border border-border p-4 text-left transition-colors hover:bg-muted"
+                >
+                  <Building2 className="h-6 w-6 text-primary" />
+                  <div className="min-w-0">
+                    <p className="font-medium">{bank.bankName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{bank.accountHolderName} - {bank.accountNumber}</p>
+                  </div>
+                  <ExternalLink className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          <hr className="border-border" />
+
+          <div className="space-y-3">
+            <p className="text-center text-xs text-muted-foreground">
+              You have {daysRemaining} day{daysRemaining !== 1 ? "s" : ""} to complete payment.
+            </p>
+            <Link href="/student/dashboard">
+              <Button variant="outline" className="w-full">
+                Pay Later — Back to Dashboard
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Modal isOpen={showQrModal} onClose={() => { setShowQrModal(false); setPaying(false) }} title="Pay via QR Code">
+        <div className="flex flex-col items-center gap-5 py-4">
+          <div className="text-center">
+            <p className="text-sm font-medium">Scan this QR code with your payment app</p>
+            <p className="text-xs text-muted-foreground mt-1">Khalti &middot; eSewa &middot; Any QR Scanner</p>
+          </div>
+
+          {qrCodeDataUrl && (
+            <div className="rounded-xl border-2 border-primary/20 bg-white p-4 shadow-sm">
+              <img src={qrCodeDataUrl} alt="Payment QR Code" className="h-56 w-56" />
+            </div>
+          )}
+
+          <div className="w-full space-y-2 rounded-lg bg-muted/50 p-4 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Amount</span>
+              <span className="font-bold text-lg">{confirmation ? formatPrice(confirmation.commission) : ""}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Reference</span>
+              <span className="font-mono text-xs">{qrPaymentId.slice(-8).toUpperCase()}</span>
+            </div>
+          </div>
+
+          <div className="w-full space-y-1 rounded-lg border border-accent/50 bg-accent/10 p-3 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground">Instructions:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Open your Khalti or eSewa app</li>
+              <li>Tap the scan icon and scan this QR code</li>
+              <li>Enter the exact amount shown above</li>
+              <li>Complete the payment</li>
+              <li>Click <strong>&quot;I Have Paid&quot;</strong> below</li>
+            </ol>
+          </div>
+
+          <div className="flex w-full gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => { setShowQrModal(false); setPaying(false) }}>
+              Cancel
+            </Button>
+            <Button className="flex-1" onClick={handleQrPaid}>
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              I Have Paid
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showBankModal} onClose={() => setShowBankModal(false)} title="Bank Transfer Details">
+        {selectedBank && (
+          <div className="space-y-5 py-4">
+            <div className="space-y-3 rounded-lg bg-muted/50 p-4 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Bank</span>
+                <span className="font-medium">{selectedBank.bankName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Account Holder</span>
+                <span className="font-medium">{selectedBank.accountHolderName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Account Number</span>
+                <span className="font-mono font-medium">{selectedBank.accountNumber}</span>
+              </div>
+              {selectedBank.branch && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Branch</span>
+                  <span className="font-medium">{selectedBank.branch}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-lg bg-muted/50 p-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount to Pay</span>
+                <span className="font-bold text-lg text-primary">{formatPrice(confirmation.commission)}</span>
+              </div>
+            </div>
+
+            {selectedBank.qrCodeImage && (
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-sm font-medium">Or scan to pay</p>
+                <div className="rounded-xl border-2 bg-white p-3 shadow-sm">
+                  <img src={selectedBank.qrCodeImage} alt="Bank QR" className="h-48 w-48 object-contain" />
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 text-xs text-yellow-700 dark:text-yellow-400">
+              After making the transfer, the admin will verify and mark your payment. You can check status from your dashboard.
+            </div>
+
+            <Button className="w-full" onClick={() => { setShowBankModal(false); router.push("/student/dashboard") }}>
+              Back to Dashboard
+            </Button>
+          </div>
+        )}
+      </Modal>
+    </div>
+  )
+}
