@@ -15,6 +15,7 @@ export function LocationPicker({ latitude, longitude, onLocationChange }: Locati
   const markerRef = useRef<any>(null)
   const leafletRef = useRef<any>(null)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const watchIdRef = useRef<number | null>(null)
   const [gettingLocation, setGettingLocation] = useState(false)
   const [geoError, setGeoError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -62,6 +63,7 @@ export function LocationPicker({ latitude, longitude, onLocationChange }: Locati
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords
+
         handleLocationChange(lat, lng)
         if (mapInstanceRef.current && markerRef.current) {
           markerRef.current.setLatLng([lat, lng])
@@ -73,7 +75,7 @@ export function LocationPicker({ latitude, longitude, onLocationChange }: Locati
         setGeoError(err.message)
         setGettingLocation(false)
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
     )
   }
 
@@ -128,9 +130,9 @@ export function LocationPicker({ latitude, longitude, onLocationChange }: Locati
 
         const icon = L.divIcon({
           className: "",
-          html: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44"><path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="#e11d48" stroke="#be123c" stroke-width="1.5"/><circle cx="18" cy="18" r="7" fill="white"/></svg>`,
-          iconSize: [36, 44],
-          iconAnchor: [18, 44],
+          html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="34" viewBox="0 0 36 44"><path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="#e11d48" stroke="#be123c" stroke-width="1.5"/><circle cx="18" cy="18" r="7" fill="white"/></svg>`,
+          iconSize: [28, 34],
+          iconAnchor: [14, 34],
         })
 
         const marker = L.marker([currentLat, currentLng], { draggable: true, icon }).addTo(map)
@@ -158,6 +160,10 @@ export function LocationPicker({ latitude, longitude, onLocationChange }: Locati
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+        watchIdRef.current = null
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
 import { HTMLAttributes } from "react"
 
-type BadgeVariant = "default" | "secondary" | "destructive" | "outline" | "success" | "warning"
+type BadgeVariant = "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info"
 
 export function Badge({
   className,
@@ -15,6 +15,7 @@ export function Badge({
     outline: "border border-border text-foreground",
     success: "bg-accent text-accent-foreground",
     warning: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400",
+    info: "bg-blue-500/20 text-blue-700 dark:text-blue-400",
   }
   return (
     <div

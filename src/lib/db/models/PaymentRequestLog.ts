@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose"
 
 export interface IPaymentRequestLogDocument extends Document {
-  method: "khalti" | "esewa" | "qrcode"
+  method: "khalti" | "esewa" | "qrcode" | "bank"
   endpoint: string
   payload: Record<string, unknown>
   headers: Record<string, unknown>
@@ -15,7 +15,7 @@ const PaymentRequestLogSchema = new Schema<IPaymentRequestLogDocument>(
   {
     method: {
       type: String,
-      enum: ["khalti", "esewa", "qrcode"],
+      enum: ["khalti", "esewa", "qrcode", "bank"],
       required: true,
     },
     endpoint: { type: String, required: true },

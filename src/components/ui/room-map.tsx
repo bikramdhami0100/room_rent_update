@@ -32,9 +32,9 @@ export function RoomMap({ latitude, longitude, title }: RoomMapProps) {
 
           const icon = L.divIcon({
             className: "",
-            html: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44"><path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="#e11d48" stroke="#be123c" stroke-width="1.5"/><circle cx="18" cy="18" r="7" fill="white"/></svg>`,
-            iconSize: [36, 44],
-            iconAnchor: [18, 44],
+            html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="34" viewBox="0 0 36 44"><path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="#e11d48" stroke="#be123c" stroke-width="1.5"/><circle cx="18" cy="18" r="7" fill="white"/></svg>`,
+            iconSize: [28, 34],
+            iconAnchor: [14, 34],
           })
 
           L.marker([latitude, longitude], { icon }).addTo(map).bindPopup(title)

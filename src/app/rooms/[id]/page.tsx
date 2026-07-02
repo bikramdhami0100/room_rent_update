@@ -7,6 +7,7 @@ import { MapPin, Phone, ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { ImageGallery } from "@/components/ui/image-gallery"
 import { formatPrice } from "@/lib/utils"
 import { RoomMap } from "@/components/ui/room-map"
 import { toast } from "react-toastify"
@@ -40,6 +41,7 @@ export default function RoomDetailPage() {
   const [loading, setLoading] = useState(true)
   const [confirming, setConfirming] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState(0)
+  const [galleryOpen, setGalleryOpen] = useState(false)
 
   useEffect(() => {
     fetch(`/api/rooms/${params.id}`)
@@ -102,7 +104,10 @@ export default function RoomDetailPage() {
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
-          <div className="aspect-[4/3] overflow-hidden rounded-xl bg-muted">
+          <button
+            onClick={() => setGalleryOpen(true)}
+            className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted"
+          >
             {room.photos?.[selectedPhoto] && (
               <img
                 src={room.photos[selectedPhoto]}
@@ -110,7 +115,12 @@ export default function RoomDetailPage() {
                 className="h-full w-full object-cover"
               />
             )}
-          </div>
+            {room.photos && room.photos.length > 1 && (
+              <div className="absolute bottom-4 right-4 rounded-full bg-black/60 px-3 py-1 text-sm text-white">
+                {selectedPhoto + 1} / {room.photos.length}
+              </div>
+            )}
+          </button>
           {room.photos && room.photos.length > 1 && (
             <div className="mt-3 flex gap-2 overflow-x-auto">
               {room.photos.map((photo, i) => (
@@ -185,6 +195,13 @@ export default function RoomDetailPage() {
           </Button>
         </div>
       </div>
+
+      <ImageGallery
+        images={room.photos || []}
+        initialIndex={selectedPhoto}
+        isOpen={galleryOpen}
+        onClose={() => setGalleryOpen(false)}
+      />
     </div>
   )
 }

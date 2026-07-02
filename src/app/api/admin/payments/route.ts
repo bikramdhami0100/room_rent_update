@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const method = searchParams.get("method") || "qrcode"
+    const method = searchParams.get("method") || "all"
     const status = searchParams.get("status") || "pending"
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20")))
@@ -21,13 +21,15 @@ export async function GET(req: NextRequest) {
 
     await connectDB()
 
-    const filter: Record<string, unknown> = { method }
+    const filter: Record<string, unknown> = {}
+    if (method !== "all") filter.method = method
     if (status !== "all") filter.status = status
 
     const [payments, total] = await Promise.all([
       Payment.find(filter)
         .populate("studentId", "name email phone")
         .populate("roomId", "title monthlyRent location")
+        .populate("bankId", "bankName accountHolderName accountNumber")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

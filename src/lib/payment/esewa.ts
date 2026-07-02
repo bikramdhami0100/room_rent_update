@@ -3,7 +3,7 @@ import crypto from "crypto"
 const ESEWA_MERCHANT_CODE = process.env.NEXT_PUBLIC_ESEWA_MERCHANT_CODE || ""
 const ESEWA_SECRET_KEY = process.env.ESEWA_SECRET_KEY || ""
 const ESEWA_PAYMENT_URL = process.env.ESEWA_PAYMENT_URL || "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
-const ESEWA_STATUS_URL = process.env.ESEWA_STATUS_URL || "https://rc-epay.esewa.com.np/api/epay/main/v2/status"
+const ESEWA_STATUS_URL = process.env.ESEWA_STATUS_URL || "https://rc.esewa.com.np/api/epay/transaction/status/"
 
 export interface EsewaConfig {
   amount: string

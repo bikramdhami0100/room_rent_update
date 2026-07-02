@@ -180,6 +180,20 @@ export async function DELETE(req: NextRequest) {
     }
 
     await connectDB()
+
+    const room = await Room.findById(id)
+    if (!room) {
+      return NextResponse.json({ error: "Listing not found" }, { status: 404 })
+    }
+
+    if (room.photos?.length) {
+      const { unlink } = await import("fs/promises")
+      const { join, basename } = await import("path")
+      for (const url of room.photos) {
+        try { await unlink(join(process.cwd(), "public", "uploads", basename(url))) } catch {}
+      }
+    }
+
     await Room.findByIdAndDelete(id)
 
     return NextResponse.json({ success: true })

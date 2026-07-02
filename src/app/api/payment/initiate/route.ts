@@ -17,13 +17,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { confirmationId, method } = await req.json()
+    const { confirmationId, method, bankId, screenshotUrl } = await req.json()
 
     if (!confirmationId || !method) {
       return NextResponse.json({ error: "confirmationId and method are required" }, { status: 400 })
     }
 
-    if (!["khalti", "esewa", "qrcode"].includes(method)) {
+    if (!["khalti", "esewa", "qrcode", "bank"].includes(method)) {
       return NextResponse.json({ error: "Invalid payment method" }, { status: 400 })
     }
 
@@ -134,6 +134,29 @@ export async function POST(req: NextRequest) {
         isSuccess: true,
       })
       return NextResponse.json({ method: "qrcode", paymentId: payment._id, amount: confirmation.commission })
+    }
+
+    if (method === "bank") {
+      if (!bankId) {
+        return NextResponse.json({ error: "bankId is required for bank transfer" }, { status: 400 })
+      }
+      payment.method = "bank"
+      payment.bankId = bankId
+      payment.screenshotUrl = screenshotUrl || ""
+      payment.status = "pending"
+      await payment.save()
+
+      await PaymentResponseLog.create({
+        method,
+        endpoint: "/api/payment/initiate",
+        requestPayload: { confirmationId, method, bankId },
+        responseBody: { paymentId: payment._id, status: "pending" },
+        statusCode: 200,
+        paymentId: payment._id,
+        userId: token.id,
+        isSuccess: true,
+      })
+      return NextResponse.json({ method: "bank", paymentId: payment._id, status: "pending" })
     }
 
     return NextResponse.json({ error: "Invalid method" }, { status: 400 })

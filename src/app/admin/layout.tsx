@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard, ShieldCheck, List, Users, BarChart3,
-  Menu, X, ChevronLeft, CreditCard, Landmark, Settings,
+  Menu, X, ChevronLeft, CreditCard, Landmark, Settings, Wallet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRoleGuard } from "@/hooks/useRoleGuard"
@@ -17,6 +17,7 @@ type SidebarDivider = { divider: true; label: string }
 const sidebarLinks: (SidebarLink | SidebarDivider)[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/verify", label: "Verify Landlords", icon: ShieldCheck },
+  { href: "/admin/payments", label: "Payments", icon: Wallet },
   { href: "/admin/listings", label: "Manage Listings", icon: List },
   { href: "/admin/students", label: "Students", icon: Users },
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },

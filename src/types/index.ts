@@ -90,10 +90,12 @@ export interface IPayment {
   roomId: string
   landlordId: string
   amount: number
-  method: "khalti" | "esewa" | "qrcode"
+  method: "khalti" | "esewa" | "qrcode" | "bank"
   status: PaymentStatus
   transactionId?: string
   paidAt?: Date
+  screenshotUrl?: string
+  bankId?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -146,7 +148,7 @@ export interface IBankDetail {
 
 export interface IPaymentRequestLog {
   _id: string
-  method: "khalti" | "esewa" | "qrcode"
+  method: "khalti" | "esewa" | "qrcode" | "bank"
   endpoint: string
   payload: Record<string, unknown>
   headers: Record<string, unknown>
@@ -159,7 +161,7 @@ export interface IPaymentRequestLog {
 
 export interface IPaymentResponseLog {
   _id: string
-  method: "khalti" | "esewa" | "qrcode"
+  method: "khalti" | "esewa" | "qrcode" | "bank"
   endpoint: string
   requestPayload: Record<string, unknown>
   responseBody: Record<string, unknown>

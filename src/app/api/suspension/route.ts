@@ -45,9 +45,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { method } = body
+    const { method, bankId, screenshotUrl } = body
 
-    if (!method || !["khalti", "esewa", "qrcode"].includes(method)) {
+    if (!method || !["khalti", "esewa", "qrcode", "bank"].includes(method)) {
       return NextResponse.json({ error: "Invalid payment method" }, { status: 400 })
     }
 
@@ -125,6 +125,27 @@ export async function POST(req: NextRequest) {
         failureUrl: `${process.env.NEXT_PUBLIC_APP_URL}/payment/failure`,
       })
       return NextResponse.json({ method: "esewa", esewaConfig })
+    }
+
+    if (method === "bank") {
+      if (!bankId) {
+        return NextResponse.json({ error: "bankId is required for bank transfer" }, { status: 400 })
+      }
+      payment.method = "bank"
+      payment.bankId = bankId
+      payment.screenshotUrl = screenshotUrl || ""
+      payment.status = "pending"
+      await payment.save()
+
+      if (user?.email) {
+        sendEmail({
+          to: user.email,
+          subject: "Payment Proof Submitted - RoomRent",
+          text: `Your bank payment proof of Rs. ${totalDue} has been submitted for admin verification.`,
+        }).catch(() => {})
+      }
+
+      return NextResponse.json({ success: true, message: "Bank payment proof submitted for verification" })
     }
 
     return NextResponse.json({ error: "Invalid method" }, { status: 400 })

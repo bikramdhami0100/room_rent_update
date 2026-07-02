@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Modal } from "@/components/ui/modal"
+import { LocationPicker } from "@/components/ui/location-picker"
 
 interface Listing {
   _id: string
@@ -25,6 +26,9 @@ interface Listing {
   description?: string
   facilities?: string[]
   roomType?: string
+  latitude?: number
+  longitude?: number
+  whatsappNumber?: string
   createdAt?: string
   isApproved: boolean
   isActive: boolean
@@ -71,6 +75,7 @@ export default function AdminListingsPage() {
   const [acting, setActing] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Listing | null>(null)
+  const [editingListing, setEditingListing] = useState<Listing | null>(null)
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -211,7 +216,30 @@ export default function AdminListingsPage() {
   }
 
   function openAddModal() {
+    setEditingListing(null)
     setForm(INITIAL_FORM)
+    fetchLandlords()
+    setShowAddModal(true)
+  }
+
+  function openEditModal(listing: Listing) {
+    setEditingListing(listing)
+    setForm({
+      landlordId: listing.landlordId?._id || "",
+      title: listing.title,
+      description: listing.description || "",
+      monthlyRent: String(listing.monthlyRent),
+      location: listing.location,
+      address: listing.address || "",
+      latitude: listing.latitude ? String(listing.latitude) : "",
+      longitude: listing.longitude ? String(listing.longitude) : "",
+      whatsappNumber: listing.whatsappNumber || "",
+      roomType: listing.roomType || "",
+      facilityInput: "",
+      facilities: listing.facilities || [],
+      isActive: listing.isActive,
+      isApproved: listing.isApproved,
+    })
     fetchLandlords()
     setShowAddModal(true)
   }
@@ -458,6 +486,13 @@ export default function AdminListingsPage() {
                         </Button>
                         <Button
                           size="sm"
+                          variant="outline"
+                          onClick={() => openEditModal(l)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="ghost"
                           onClick={() => setDeleteTarget(l)}
                         >
@@ -475,9 +510,9 @@ export default function AdminListingsPage() {
         </>
       )}
 
-      {/* Add Room Modal */}
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add New Room" className="max-w-2xl">
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+      {/* Add/Edit Room Modal */}
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title={editingListing ? "Edit Room" : "Add New Room"} className="max-w-2xl">
+        <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Input
@@ -544,6 +579,15 @@ export default function AdminListingsPage() {
               onChange={(e) => setForm({ ...form, whatsappNumber: e.target.value })}
               placeholder="e.g. 9800000000"
             />
+          </div>
+
+          <LocationPicker
+            latitude={form.latitude ? Number(form.latitude) : null}
+            longitude={form.longitude ? Number(form.longitude) : null}
+            onLocationChange={(lat, lng) => setForm({ ...form, latitude: String(lat), longitude: String(lng) })}
+          />
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <label className="text-sm font-medium block mb-1">Landlord</label>
               <select
@@ -608,11 +652,13 @@ export default function AdminListingsPage() {
               Approved
             </label>
           </div>
-        </div>
 
-        <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-          <Button variant="outline" onClick={() => setShowAddModal(false)}>Cancel</Button>
-          <Button onClick={handleSaveRoom} loading={saving}>Create Room</Button>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowAddModal(false)}>Cancel</Button>
+            <Button onClick={handleSaveRoom} loading={saving}>
+              {editingListing ? "Update Room" : "Create Room"}
+            </Button>
+          </div>
         </div>
       </Modal>
 

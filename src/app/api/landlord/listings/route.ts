@@ -156,6 +156,14 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    if (room.photos?.length) {
+      const { unlink } = await import("fs/promises")
+      const { join, basename } = await import("path")
+      for (const url of room.photos) {
+        try { await unlink(join(process.cwd(), "public", "uploads", basename(url))) } catch {}
+      }
+    }
+
     await Room.findByIdAndDelete(id)
 
     return NextResponse.json({ success: true })

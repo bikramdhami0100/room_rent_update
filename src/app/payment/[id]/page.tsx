@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Wallet, CreditCard, QrCode, Building2, MapPin, Clock, AlertTriangle, Loader2, CheckCircle2, ExternalLink } from "lucide-react"
+import { Wallet, CreditCard, QrCode, Building2, MapPin, Clock, AlertTriangle, Loader2, CheckCircle2, ExternalLink, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Modal } from "@/components/ui/modal"
@@ -53,6 +53,10 @@ export default function PaymentPage() {
   const [bankDetails, setBankDetails] = useState<BankDetail[]>([])
   const [showBankModal, setShowBankModal] = useState(false)
   const [selectedBank, setSelectedBank] = useState<BankDetail | null>(null)
+  const [bankScreenshot, setBankScreenshot] = useState<File | null>(null)
+  const [bankScreenshotPreview, setBankScreenshotPreview] = useState("")
+  const [uploadingBank, setUploadingBank] = useState(false)
+  const [bankPaymentId, setBankPaymentId] = useState("")
 
   const generateQrCode = useCallback(async (text: string) => {
     const QRCode = (await import("qrcode")).default
@@ -182,6 +186,59 @@ export default function PaymentPage() {
       }
     } catch {
       toast.error("Verification failed")
+    }
+  }
+
+  function handleBankScreenshotChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBankScreenshot(file)
+    setBankScreenshotPreview(URL.createObjectURL(file))
+  }
+
+  async function handleBankSubmit() {
+    if (!selectedBank) return
+    if (!bankScreenshot) {
+      toast.error("Please upload a payment screenshot or statement")
+      return
+    }
+    setUploadingBank(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", bankScreenshot)
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+      if (!uploadRes.ok) throw new Error("Screenshot upload failed")
+      const { url } = await uploadRes.json()
+
+      const res = await fetch("/api/payment/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          confirmationId: params.id,
+          method: "bank",
+          bankId: selectedBank._id,
+          screenshotUrl: url,
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Bank payment submission failed")
+      }
+
+      const data = await res.json()
+      setBankPaymentId(data.paymentId)
+      toast.success("Payment proof submitted! Admin will verify shortly.")
+      setShowBankModal(false)
+      router.push("/student/dashboard")
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to submit payment proof")
+    } finally {
+      setUploadingBank(false)
     }
   }
 
@@ -366,7 +423,7 @@ export default function PaymentPage() {
         </div>
       </Modal>
 
-      <Modal isOpen={showBankModal} onClose={() => setShowBankModal(false)} title="Bank Transfer Details">
+      <Modal isOpen={showBankModal} onClose={() => { setShowBankModal(false); setBankScreenshot(null); setBankScreenshotPreview("") }} title="Bank Transfer Details">
         {selectedBank && (
           <div className="space-y-5 py-4">
             <div className="space-y-3 rounded-lg bg-muted/50 p-4 text-sm">
@@ -399,20 +456,48 @@ export default function PaymentPage() {
 
             {selectedBank.qrCodeImage && (
               <div className="flex flex-col items-center gap-2">
-                <p className="text-sm font-medium">Or scan to pay</p>
+                <p className="text-sm font-medium">Or scan bank QR to pay</p>
                 <div className="rounded-xl border-2 bg-white p-3 shadow-sm">
                   <img src={selectedBank.qrCodeImage} alt="Bank QR" className="h-48 w-48 object-contain" />
                 </div>
               </div>
             )}
 
-            <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 text-xs text-yellow-700 dark:text-yellow-400">
-              After making the transfer, the admin will verify and mark your payment. You can check status from your dashboard.
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+              <p className="text-sm font-semibold">Upload Payment Screenshot / Statement</p>
+              <p className="text-xs text-muted-foreground">
+                After making the transfer, upload a screenshot or bank statement as proof of payment. Admin will verify and confirm your payment.
+              </p>
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-muted-foreground/30 p-4 hover:bg-muted/50 transition-colors">
+                <Upload className="h-5 w-5 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {bankScreenshot ? bankScreenshot.name : "Tap to upload screenshot"}
+                  </p>
+                  <p className="text-xs text-muted-foreground/60">JPG, PNG, or PDF (max 5MB)</p>
+                </div>
+                <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleBankScreenshotChange} />
+              </label>
+              {bankScreenshotPreview && (
+                <div className="rounded-lg border overflow-hidden">
+                  <img src={bankScreenshotPreview} alt="Screenshot preview" className="max-h-40 w-full object-contain bg-muted" />
+                </div>
+              )}
             </div>
 
-            <Button className="w-full" onClick={() => { setShowBankModal(false); router.push("/student/dashboard") }}>
-              Back to Dashboard
-            </Button>
+            <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 text-xs text-yellow-700 dark:text-yellow-400">
+              After submitting proof, the admin will verify and mark your payment. It may take up to 24 hours.
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => { setShowBankModal(false); setBankScreenshot(null); setBankScreenshotPreview("") }}>
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={handleBankSubmit} loading={uploadingBank} disabled={!bankScreenshot}>
+                <Upload className="mr-2 h-4 w-4" />
+                Submit Proof
+              </Button>
+            </div>
           </div>
         )}
       </Modal>
