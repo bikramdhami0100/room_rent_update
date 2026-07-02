@@ -4,6 +4,9 @@ import { connectDB } from "@/lib/db/connect"
 import Payment from "@/lib/db/models/Payment"
 import Confirmation from "@/lib/db/models/Confirmation"
 import User from "@/lib/db/models/User"
+import { createLandlordEarning } from "@/lib/earning"
+import fs from "fs"
+import path from "path"
 
 export async function GET(req: NextRequest) {
   try {
@@ -86,10 +89,28 @@ export async function POST(req: NextRequest) {
         commissionDue: 0,
         isSuspended: false,
       })
+
+      await createLandlordEarning(payment._id.toString())
     }
 
+    if (action === "reject") {
+      payment.status = "rejected"
+      if (payment.screenshotUrl) {
+        const filePath = path.join(process.cwd(), "public", payment.screenshotUrl)
+        try {
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath)
+            console.log(`Deleted screenshot: ${filePath}`)
+          }
+        } catch (fileErr) {
+          console.error("Failed to delete screenshot:", fileErr)
+        }
+      }
+      await payment.save()
+    }
     return NextResponse.json({ success: true })
   } catch (error) {
+    console.error("Admin payments POST error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

@@ -119,7 +119,9 @@
     "payNow": "Pay Now",
     "bankTransfer": "Bank Transfer",
     "payToLandlord": "Pay Rent to Landlord",
-    "payOutside": "Pay directly to the landlord via cash, bank transfer, Khalti, or eSewa"
+    "payOutside": "Pay directly to the landlord via cash, bank transfer, Khalti, or eSewa",
+    "direct": "Direct Payment",
+    "directDesc": "Pay directly via any payment app (Khalti, eSewa, Bank) by scanning the QR code"
   },
   "suspension": {
     "title": "Account Suspended",
@@ -127,6 +129,34 @@
     "payToReactivate": "Pay pending commission to reactivate your account",
     "amountDue": "Amount Due",
     "reactivate": "Pay & Reactivate"
+  },
+  "landlordEarning": {
+    "title": "Your Earnings",
+    "totalEarned": "Total Earned",
+    "pendingPayout": "Pending Payout",
+    "paidOut": "Paid Out",
+    "shareInfo": "You earn 25% of the 0.5% commission paid by students",
+    "payoutDetails": "Payout Details",
+    "payoutMethod": "Payout Method",
+    "payoutFrequency": "Payout Frequency",
+    "accountName": "Account Holder Name",
+    "accountNumber": "Account Number / Phone",
+    "bankName": "Bank Name",
+    "qrCode": "QR Code Image URL",
+    "saveDetails": "Save Details",
+    "earningsHistory": "Earnings History",
+    "payoutHistory": "Payout History",
+    "yourShare": "Your Share (25%)",
+    "studentCommission": "Student Commission",
+    "commissionInfo": "Students pay 0.5% commission on monthly rent to admin. You earn 25% of that commission (0.125% of rent) as your share."
+  },
+  "adminPayout": {
+    "title": "Landlord Payouts",
+    "totalPending": "Total Pending Payout",
+    "processPayout": "Process Payout",
+    "pay": "Pay",
+    "viewDetails": "View Details",
+    "noEarnings": "No landlord earnings to display"
   },
   "common": {
     "loading": "Loading...",

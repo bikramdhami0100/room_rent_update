@@ -8,6 +8,7 @@ import PaymentRequestLog from "@/lib/db/models/PaymentRequestLog"
 import PaymentResponseLog from "@/lib/db/models/PaymentResponseLog"
 import { lookupKhaltiPayment } from "@/lib/payment/khalti"
 import { decodeEsewaData, verifyEsewaPayment } from "@/lib/payment/esewa"
+import { createLandlordEarning } from "@/lib/earning"
 
 export async function POST(req: NextRequest) {
   try {
@@ -174,6 +175,8 @@ export async function POST(req: NextRequest) {
         isSuspended: false,
       })
 
+      await createLandlordEarning(payment._id.toString())
+
       await PaymentResponseLog.create({
         method,
         endpoint: "/api/payment/verify",
@@ -209,6 +212,8 @@ export async function POST(req: NextRequest) {
       commissionDue: 0,
       isSuspended: false,
     })
+
+    await createLandlordEarning(payment._id.toString())
 
     return NextResponse.json({ success: true })
   } catch (error) {

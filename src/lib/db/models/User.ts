@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose"
-import type { UserRole } from "@/types"
+import type { UserRole, PayoutMethod, PayoutFrequency } from "@/types"
 
 export interface IUserDocument extends Document {
   name: string
@@ -14,6 +14,13 @@ export interface IUserDocument extends Document {
   commissionDue?: number
   resetToken?: string
   resetTokenExpiry?: Date
+  // Landlord payout details
+  payoutMethod?: PayoutMethod
+  payoutAccountName?: string
+  payoutAccountNumber?: string
+  payoutBankName?: string
+  payoutQrCode?: string
+  payoutFrequency?: PayoutFrequency
 }
 
 const UserSchema = new Schema<IUserDocument>(
@@ -34,6 +41,16 @@ const UserSchema = new Schema<IUserDocument>(
     commissionDue: { type: Number, default: 0 },
     resetToken: { type: String },
     resetTokenExpiry: { type: Date },
+    // Landlord payout details
+    payoutMethod: { type: String, enum: ["bank", "esewa", "khalti", "qrcode"] },
+    payoutAccountName: { type: String },
+    payoutAccountNumber: { type: String },
+    payoutBankName: { type: String },
+    payoutQrCode: { type: String },
+    payoutFrequency: {
+      type: String,
+      enum: ["weekly", "monthly", "thrice_monthly", "half_yearly", "yearly"],
+    },
   },
   { timestamps: true }
 )

@@ -109,7 +109,7 @@ export async function PUT(req: NextRequest) {
     const body = await req.json()
     const {
       _id, landlordId, title, description, monthlyRent, location, address,
-      latitude, longitude, whatsappNumber, facilities, roomType, isActive, isApproved,
+      latitude, longitude, whatsappNumber, facilities, roomType, photos, isActive, isApproved,
     } = body
 
     await connectDB()
@@ -128,6 +128,7 @@ export async function PUT(req: NextRequest) {
       if (whatsappNumber !== undefined) updateData.whatsappNumber = whatsappNumber
       if (facilities !== undefined) updateData.facilities = facilities
       if (roomType !== undefined) updateData.roomType = roomType
+      if (photos !== undefined) updateData.photos = photos
       if (isActive !== undefined) updateData.isActive = isActive
       if (isApproved !== undefined) updateData.isApproved = isApproved
 
@@ -155,6 +156,7 @@ export async function PUT(req: NextRequest) {
       whatsappNumber,
       facilities: facilities || [],
       roomType: roomType || "",
+      photos: photos || [],
       isActive: isActive ?? true,
       isApproved: isApproved ?? true,
     })

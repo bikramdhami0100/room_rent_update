@@ -7,7 +7,7 @@ export interface IPaymentDocument extends Document {
   roomId: mongoose.Types.ObjectId
   landlordId: mongoose.Types.ObjectId
   amount: number
-  method: "khalti" | "esewa" | "qrcode" | "bank"
+  method: "khalti" | "esewa" | "qrcode" | "bank" | "direct"
   status: PaymentStatus
   transactionId?: string
   paidAt?: Date
@@ -28,12 +28,12 @@ const PaymentSchema = new Schema<IPaymentDocument>(
     amount: { type: Number, required: true },
     method: {
       type: String,
-      enum: ["khalti", "esewa", "qrcode", "bank"],
+      enum: ["khalti", "esewa", "qrcode", "bank", "direct"],
       required: true,
     },
     status: {
       type: String,
-      enum: ["pending", "paid", "overdue"],
+      enum: ["pending", "paid", "overdue", "rejected"],
       default: "pending",
     },
     transactionId: { type: String },

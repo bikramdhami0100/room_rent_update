@@ -20,7 +20,7 @@ const ConfirmationSchema = new Schema<IConfirmationDocument>(
     commissionDeadline: { type: Date, required: true },
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "overdue"],
+      enum: ["pending", "paid", "overdue", "rejected"],
       default: "pending",
     },
     confirmedAt: { type: Date, default: Date.now },

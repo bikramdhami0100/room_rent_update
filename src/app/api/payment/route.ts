@@ -5,6 +5,7 @@ import Payment from "@/lib/db/models/Payment"
 import Confirmation from "@/lib/db/models/Confirmation"
 import User from "@/lib/db/models/User"
 import Room from "@/lib/db/models/Room"
+import { createLandlordEarning } from "@/lib/earning"
 
 export async function GET(req: NextRequest) {
   try {
@@ -126,6 +127,8 @@ export async function POST(req: NextRequest) {
       commissionDue: 0,
       isSuspended: false,
     })
+
+    await createLandlordEarning(payment._id.toString())
 
     return NextResponse.json({ success: true, payment })
   } catch (error) {

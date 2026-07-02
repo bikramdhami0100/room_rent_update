@@ -14,6 +14,7 @@ import {
   PlusCircle,
   CreditCard,
   Landmark,
+  HandCoins,
   Settings,
   PanelLeftClose,
   PanelLeft,
@@ -41,6 +42,7 @@ const adminLinks: (NavLink | NavDivider)[] = [
   { href: "/admin/system-config/esewa", label: "eSewa", icon: CreditCard },
   { href: "/admin/system-config/khalti", label: "Khalti", icon: CreditCard },
   { href: "/admin/system-config/bank-details", label: "Bank Details", icon: Landmark },
+  { href: "/admin/system-config/direct-payment", label: "Direct Payment", icon: HandCoins },
 ]
 
 const landlordLinks: NavLink[] = [

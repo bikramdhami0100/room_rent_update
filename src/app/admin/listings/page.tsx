@@ -29,6 +29,7 @@ interface Listing {
   latitude?: number
   longitude?: number
   whatsappNumber?: string
+  photos?: string[]
   createdAt?: string
   isApproved: boolean
   isActive: boolean
@@ -86,6 +87,8 @@ export default function AdminListingsPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [form, setForm] = useState(INITIAL_FORM)
   const [saving, setSaving] = useState(false)
+  const [newPhotos, setNewPhotos] = useState<FileList | null>(null)
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([])
   const [landlords, setLandlords] = useState<Landlord[]>([])
   const [loadingLandlords, setLoadingLandlords] = useState(false)
 
@@ -218,6 +221,8 @@ export default function AdminListingsPage() {
   function openAddModal() {
     setEditingListing(null)
     setForm(INITIAL_FORM)
+    setNewPhotos(null)
+    setExistingPhotos([])
     fetchLandlords()
     setShowAddModal(true)
   }
@@ -240,6 +245,8 @@ export default function AdminListingsPage() {
       isActive: listing.isActive,
       isApproved: listing.isApproved,
     })
+    setNewPhotos(null)
+    setExistingPhotos(listing.photos || [])
     fetchLandlords()
     setShowAddModal(true)
   }
@@ -262,10 +269,23 @@ export default function AdminListingsPage() {
     }
     setSaving(true)
     try {
+      let photoUrls = [...existingPhotos]
+
+      if (newPhotos && newPhotos.length > 0) {
+        for (const file of Array.from(newPhotos)) {
+          const formData = new FormData()
+          formData.append("file", file)
+          const uploadRes = await fetch("/api/upload", { method: "POST", body: formData })
+          const { url } = await uploadRes.json()
+          photoUrls.push(url)
+        }
+      }
+
       const res = await fetch("/api/admin/manage/listings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          _id: editingListing?._id,
           landlordId: form.landlordId || undefined,
           title: form.title,
           description: form.description,
@@ -277,18 +297,19 @@ export default function AdminListingsPage() {
           whatsappNumber: form.whatsappNumber || undefined,
           facilities: form.facilities,
           roomType: form.roomType,
+          photos: photoUrls,
           isActive: form.isActive,
           isApproved: form.isApproved,
         }),
       })
       if (res.ok) {
-        toast.success("Room created successfully")
+        toast.success(editingListing ? "Room updated successfully" : "Room created successfully")
         setShowAddModal(false)
         setPage(1)
         fetchListings()
       } else {
         const err = await res.json()
-        toast.error(err.error || "Failed to create room")
+        toast.error(err.error || "Failed to save room")
       }
     } catch {
       toast.error("Something went wrong")
@@ -629,6 +650,20 @@ export default function AdminListingsPage() {
                   </span>
                 ))}
               </div>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Photos {editingListing ? "(add more)" : ""}</label>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+              onChange={(e) => setNewPhotos(e.target.files)}
+            />
+            {editingListing && existingPhotos.length > 0 && (
+              <p className="text-xs text-muted-foreground">{existingPhotos.length} existing photo(s)</p>
             )}
           </div>
 

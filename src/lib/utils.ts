@@ -17,6 +17,12 @@ export function calculateCommission(rent: number): number {
   return Math.round(rent * 0.005)
 }
 
+const LANDLORD_SHARE_PERCENT = 25
+
+export function calculateLandlordShare(studentCommission: number): number {
+  return Math.round(studentCommission * LANDLORD_SHARE_PERCENT / 100)
+}
+
 export function getDeadlineDate(days: number = 3): Date {
   const date = new Date()
   date.setDate(date.getDate() + days)

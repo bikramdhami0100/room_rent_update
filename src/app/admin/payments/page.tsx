@@ -30,7 +30,7 @@ export default function AdminPaymentsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [methodFilter, setMethodFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("pending")
+  const [statusFilter, setStatusFilter] = useState("all")
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [processing, setProcessing] = useState<string | null>(null)
 
@@ -91,6 +91,7 @@ export default function AdminPaymentsPage() {
       case "esewa": return <Badge variant="info">eSewa</Badge>
       case "qrcode": return <Badge variant="warning">QR Code</Badge>
       case "bank": return <Badge variant="secondary">Bank</Badge>
+      case "direct": return <Badge variant="info">Direct</Badge>
       default: return <Badge>{method}</Badge>
     }
   }
@@ -100,6 +101,7 @@ export default function AdminPaymentsPage() {
       case "paid": return <Badge variant="success">Paid</Badge>
       case "pending": return <Badge variant="warning">Pending</Badge>
       case "overdue": return <Badge variant="destructive">Overdue</Badge>
+      case "rejected": return <Badge variant="destructive">Rejected</Badge>
       default: return <Badge>{status}</Badge>
     }
   }
@@ -108,7 +110,7 @@ export default function AdminPaymentsPage() {
     <div className="mx-auto max-w-6xl space-y-6 py-10">
       <div>
         <h1 className="text-3xl font-bold">Payment Management</h1>
-        <p className="text-muted-foreground">Verify and manage QR code and bank transfer payments</p>
+        <p className="text-muted-foreground">Verify and manage QR code, bank transfer, and direct payments</p>
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">
@@ -126,13 +128,15 @@ export default function AdminPaymentsPage() {
             <option value="esewa">eSewa</option>
             <option value="qrcode">QR Code</option>
             <option value="bank">Bank Transfer</option>
+            <option value="direct">Direct</option>
           </select>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
             className="h-10 rounded-lg border border-input bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <option value="all">All Status</option>
             <option value="pending">Pending</option>
             <option value="paid">Paid</option>
+            <option value="rejected">Rejected</option>
             <option value="overdue">Overdue</option>
-            <option value="all">All Status</option>
           </select>
         </div>
       </div>
@@ -176,7 +180,7 @@ export default function AdminPaymentsPage() {
                   </div>
 
                   <div className="flex flex-col items-end gap-2 shrink-0">
-                    {(payment.method === "qrcode" || payment.method === "bank") && payment.status === "pending" && (
+                    {(payment.method === "qrcode" || payment.method === "bank" || payment.method === "direct") && payment.status === "pending" && (
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" className="text-green-600 border-green-600/30 hover:bg-green-600/10"
                           onClick={() => handleAction(payment._id, "verify")}

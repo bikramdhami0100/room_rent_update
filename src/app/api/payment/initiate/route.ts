@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "confirmationId and method are required" }, { status: 400 })
     }
 
-    if (!["khalti", "esewa", "qrcode", "bank"].includes(method)) {
+    if (!["khalti", "esewa", "qrcode", "bank", "direct"].includes(method)) {
       return NextResponse.json({ error: "Invalid payment method" }, { status: 400 })
     }
 
@@ -157,6 +157,25 @@ export async function POST(req: NextRequest) {
         isSuccess: true,
       })
       return NextResponse.json({ method: "bank", paymentId: payment._id, status: "pending" })
+    }
+
+    if (method === "direct") {
+      payment.method = "direct"
+      payment.screenshotUrl = screenshotUrl || ""
+      payment.status = "pending"
+      await payment.save()
+
+      await PaymentResponseLog.create({
+        method,
+        endpoint: "/api/payment/initiate",
+        requestPayload: { confirmationId, method },
+        responseBody: { paymentId: payment._id, status: "pending" },
+        statusCode: 200,
+        paymentId: payment._id,
+        userId: token.id,
+        isSuccess: true,
+      })
+      return NextResponse.json({ method: "direct", paymentId: payment._id, status: "pending" })
     }
 
     return NextResponse.json({ error: "Invalid method" }, { status: 400 })

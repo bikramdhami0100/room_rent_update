@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Wallet, CreditCard, QrCode, Building2, MapPin, Clock, AlertTriangle, Loader2, CheckCircle2, ExternalLink, Upload } from "lucide-react"
+import { Wallet, CreditCard, QrCode, Building2, MapPin, Clock, AlertTriangle, Loader2, CheckCircle2, ExternalLink, Upload, HandCoins } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Modal } from "@/components/ui/modal"
@@ -37,6 +37,14 @@ interface BankDetail {
   isActive: boolean
 }
 
+interface DirectPaymentConfig {
+  _id: string
+  title: string
+  description: string
+  qrCodeImage: string
+  isActive: boolean
+}
+
 const ESEWA_FORM_ACTION = "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
 
 export default function PaymentPage() {
@@ -57,6 +65,13 @@ export default function PaymentPage() {
   const [bankScreenshotPreview, setBankScreenshotPreview] = useState("")
   const [uploadingBank, setUploadingBank] = useState(false)
   const [bankPaymentId, setBankPaymentId] = useState("")
+  const [directConfigs, setDirectConfigs] = useState<DirectPaymentConfig[]>([])
+  const [showDirectModal, setShowDirectModal] = useState(false)
+  const [selectedDirectConfig, setSelectedDirectConfig] = useState<DirectPaymentConfig | null>(null)
+  const [directScreenshot, setDirectScreenshot] = useState<File | null>(null)
+  const [directScreenshotPreview, setDirectScreenshotPreview] = useState("")
+  const [uploadingDirect, setUploadingDirect] = useState(false)
+  const [directPaymentId, setDirectPaymentId] = useState("")
 
   const generateQrCode = useCallback(async (text: string) => {
     const QRCode = (await import("qrcode")).default
@@ -67,6 +82,7 @@ export default function PaymentPage() {
     { id: "khalti", name: t("payment.khalti"), icon: Wallet },
     { id: "esewa", name: t("payment.esewa"), icon: CreditCard },
     { id: "qrcode", name: t("payment.qrCode"), icon: QrCode },
+    { id: "direct", name: "Direct Payment", icon: HandCoins },
   ]
 
   const [deadlineCountdown, setDeadlineCountdown] = useState("")
@@ -75,10 +91,12 @@ export default function PaymentPage() {
     Promise.all([
       fetch(`/api/confirm/${params.id}`).then(r => r.ok ? r.json() : Promise.reject()),
       fetch("/api/bank-details").then(r => r.ok ? r.json() : []),
+      fetch("/api/direct-payment").then(r => r.ok ? r.json() : []),
     ])
-      .then(([conf, banks]) => {
+      .then(([conf, banks, directConfigs]) => {
         setConfirmation(conf)
         setBankDetails(banks)
+        setDirectConfigs(directConfigs)
       })
       .catch(() => setConfirmation(null))
       .finally(() => setLoading(false))
@@ -126,6 +144,15 @@ export default function PaymentPage() {
         setQrCodeDataUrl(dataUrl)
         setShowQrModal(true)
         return
+      }
+
+      if (payMethod === "direct") {
+        if (directConfigs.length > 0) {
+          setSelectedDirectConfig(null)
+          setShowDirectModal(true)
+          return
+        }
+        throw new Error("No direct payment method configured yet")
       }
 
       const res = await fetch("/api/payment/initiate", {
@@ -239,6 +266,57 @@ export default function PaymentPage() {
       toast.error(e instanceof Error ? e.message : "Failed to submit payment proof")
     } finally {
       setUploadingBank(false)
+    }
+  }
+
+  function handleDirectScreenshotChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setDirectScreenshot(file)
+    setDirectScreenshotPreview(URL.createObjectURL(file))
+  }
+
+  async function handleDirectSubmit() {
+    if (!directScreenshot) {
+      toast.error("Please upload a payment screenshot or statement")
+      return
+    }
+    setUploadingDirect(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", directScreenshot)
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+      if (!uploadRes.ok) throw new Error("Screenshot upload failed")
+      const { url } = await uploadRes.json()
+
+      const res = await fetch("/api/payment/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          confirmationId: params.id,
+          method: "direct",
+          screenshotUrl: url,
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Direct payment submission failed")
+      }
+
+      const data = await res.json()
+      setDirectPaymentId(data.paymentId)
+      toast.success("Payment proof submitted! Admin will verify shortly.")
+      setShowDirectModal(false)
+      router.push("/student/dashboard")
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to submit payment proof")
+    } finally {
+      setUploadingDirect(false)
     }
   }
 
@@ -420,6 +498,101 @@ export default function PaymentPage() {
               I Have Paid
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showDirectModal} onClose={() => { setShowDirectModal(false); setDirectScreenshot(null); setDirectScreenshotPreview("") }} title="Direct Payment">
+        <div className="space-y-5 py-4">
+          {directConfigs.length > 1 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Select payment method</p>
+              {directConfigs.map((cfg) => (
+                <button
+                  key={cfg._id}
+                  onClick={() => setSelectedDirectConfig(cfg)}
+                  className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted ${
+                    selectedDirectConfig?._id === cfg._id ? "border-primary bg-primary/5" : "border-border"
+                  }`}
+                >
+                  <HandCoins className="h-5 w-5 text-primary shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">{cfg.title}</p>
+                    {cfg.description && <p className="text-xs text-muted-foreground">{cfg.description}</p>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {(selectedDirectConfig || directConfigs.length === 1) && (
+            <>
+              {(() => {
+                const config = selectedDirectConfig || directConfigs[0]
+                return (
+                  <>
+                    {directConfigs.length === 1 && (
+                      <div>
+                        <p className="text-sm font-medium">{config.title}</p>
+                        {config.description && <p className="text-xs text-muted-foreground">{config.description}</p>}
+                      </div>
+                    )}
+
+                    <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Amount to Pay</span>
+                        <span className="font-bold text-lg text-primary">{formatPrice(confirmation.commission)}</span>
+                      </div>
+                    </div>
+
+                    {config.qrCodeImage && (
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="text-sm font-medium">Scan this QR code to pay</p>
+                        <div className="rounded-xl border-2 bg-white p-3 shadow-sm">
+                          <img src={config.qrCodeImage} alt="Payment QR" className="h-48 w-48 object-contain" />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                      <p className="text-sm font-semibold">Upload Payment Screenshot / Statement</p>
+                      <p className="text-xs text-muted-foreground">
+                        After making the payment, upload a screenshot or statement as proof. Admin will verify and confirm your payment.
+                      </p>
+                      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-muted-foreground/30 p-4 hover:bg-muted/50 transition-colors">
+                        <Upload className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            {directScreenshot ? directScreenshot.name : "Tap to upload screenshot"}
+                          </p>
+                          <p className="text-xs text-muted-foreground/60">JPG, PNG, or PDF (max 5MB)</p>
+                        </div>
+                        <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleDirectScreenshotChange} />
+                      </label>
+                      {directScreenshotPreview && (
+                        <div className="rounded-lg border overflow-hidden">
+                          <img src={directScreenshotPreview} alt="Screenshot preview" className="max-h-40 w-full object-contain bg-muted" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 text-xs text-yellow-700 dark:text-yellow-400">
+                      After submitting proof, the admin will verify and mark your payment. It may take up to 24 hours.
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1" onClick={() => { setShowDirectModal(false); setDirectScreenshot(null); setDirectScreenshotPreview("") }}>
+                        Cancel
+                      </Button>
+                      <Button className="flex-1" onClick={handleDirectSubmit} loading={uploadingDirect} disabled={!directScreenshot}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Submit Proof
+                      </Button>
+                    </div>
+                  </>
+                )
+              })()}
+            </>
+          )}
         </div>
       </Modal>
 

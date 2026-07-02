@@ -20,6 +20,13 @@ export type PaymentStatus =
   | "pending"
   | "paid"
   | "overdue"
+  | "rejected"
+
+export type PayoutMethod = "bank" | "esewa" | "khalti" | "qrcode"
+
+export type PayoutFrequency = "weekly" | "monthly" | "thrice_monthly" | "half_yearly" | "yearly"
+
+export type PayoutStatus = "pending" | "paid" | "cancelled"
 
 export interface IUser {
   _id: string
@@ -34,6 +41,13 @@ export interface IUser {
   commissionDue?: number
   resetToken?: string
   resetTokenExpiry?: Date
+  // Landlord payout details
+  payoutMethod?: PayoutMethod
+  payoutAccountName?: string
+  payoutAccountNumber?: string
+  payoutBankName?: string
+  payoutQrCode?: string
+  payoutFrequency?: PayoutFrequency
   createdAt: Date
   updatedAt: Date
 }
@@ -90,12 +104,38 @@ export interface IPayment {
   roomId: string
   landlordId: string
   amount: number
-  method: "khalti" | "esewa" | "qrcode" | "bank"
+  method: "khalti" | "esewa" | "qrcode" | "bank" | "direct"
   status: PaymentStatus
   transactionId?: string
   paidAt?: Date
   screenshotUrl?: string
   bankId?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ILandlordEarning {
+  _id: string
+  paymentId: string
+  landlordId: string
+  confirmationId: string
+  studentCommission: number
+  landlordShare: number
+  status: "pending" | "paid"
+  payoutId?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ILandlordPayout {
+  _id: string
+  landlordId: string | IUser
+  amount: number
+  frequency: PayoutFrequency
+  status: PayoutStatus
+  paidAt?: Date
+  adminId?: string
+  note?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -146,9 +186,19 @@ export interface IBankDetail {
   updatedAt: Date
 }
 
+export interface IDirectPaymentConfig {
+  _id: string
+  title: string
+  description: string
+  qrCodeImage: string
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface IPaymentRequestLog {
   _id: string
-  method: "khalti" | "esewa" | "qrcode" | "bank"
+  method: "khalti" | "esewa" | "qrcode" | "bank" | "direct"
   endpoint: string
   payload: Record<string, unknown>
   headers: Record<string, unknown>
@@ -161,7 +211,7 @@ export interface IPaymentRequestLog {
 
 export interface IPaymentResponseLog {
   _id: string
-  method: "khalti" | "esewa" | "qrcode" | "bank"
+  method: "khalti" | "esewa" | "qrcode" | "bank" | "direct"
   endpoint: string
   requestPayload: Record<string, unknown>
   responseBody: Record<string, unknown>

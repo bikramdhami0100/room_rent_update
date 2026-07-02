@@ -21,10 +21,13 @@ const sidebarLinks: (SidebarLink | SidebarDivider)[] = [
   { href: "/admin/listings", label: "Manage Listings", icon: List },
   { href: "/admin/students", label: "Students", icon: Users },
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+  { href: "/admin/landlord-payouts", label: "Landlord Payouts", icon: Wallet },
   { divider: true, label: "System Config" },
   { href: "/admin/system-config/esewa", label: "eSewa", icon: CreditCard },
   { href: "/admin/system-config/khalti", label: "Khalti", icon: CreditCard },
   { href: "/admin/system-config/bank-details", label: "Bank Details", icon: Landmark },
+  // direct-payment
+  {href: "/admin/system-config/direct-payment", label: "Direct Payment", icon: CreditCard},
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

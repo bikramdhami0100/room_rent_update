@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import {
-  Home, CheckCircle, Clock, AlertTriangle, Search, X,
+  Home, CheckCircle, Clock, AlertTriangle, Search, X, Eye, Trash2,
   ArrowUpDown, ArrowUp, ArrowDown, Loader2,
 } from "lucide-react"
 import { formatPrice, getDaysRemaining } from "@/lib/utils"
@@ -20,7 +20,7 @@ interface Booking {
   roomId: { _id: string; title: string; photos: string[]; monthlyRent: number }
   commission: number
   commissionDeadline: string
-  paymentStatus: "pending" | "paid" | "overdue"
+  paymentStatus: "pending" | "paid" | "overdue" | "rejected"
   confirmedAt: string
 }
 
@@ -29,6 +29,14 @@ interface BookingsResponse {
   total: number
   page: number
   totalPages: number
+}
+
+interface PaymentInfo {
+  _id: string
+  confirmationId: string
+  method: string
+  status: string
+  screenshotUrl?: string
 }
 
 export default function StudentDashboardPage() {
@@ -45,6 +53,11 @@ export default function StudentDashboardPage() {
 
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null)
   const [cancelling, setCancelling] = useState(false)
+  const [viewBooking, setViewBooking] = useState<Booking | null>(null)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [paymentMap, setPaymentMap] = useState<Record<string, PaymentInfo>>({})
 
   const { t } = useT()
 
@@ -66,6 +79,24 @@ export default function StudentDashboardPage() {
         setBookings(data.bookings)
         setTotal(data.total)
         setTotalPages(data.totalPages)
+
+        const pendingBookings = data.bookings.filter(b => b.paymentStatus === "pending")
+        if (pendingBookings.length > 0) {
+          const ids = pendingBookings.map(b => b._id).join(",")
+          const payRes = await fetch(`/api/student/payments?ids=${ids}`)
+          if (payRes.ok) {
+            const payData = await payRes.json()
+            const map: Record<string, PaymentInfo> = {}
+            payData.payments.forEach((p: PaymentInfo) => {
+              if (!map[p.confirmationId] || p.status === "pending") {
+                map[p.confirmationId] = p
+              }
+            })
+            setPaymentMap(map)
+          }
+        } else {
+          setPaymentMap({})
+        }
       }
     } catch {
       toast.error("Failed to fetch bookings")
@@ -95,6 +126,26 @@ export default function StudentDashboardPage() {
       toast.error("Something went wrong")
     } finally {
       setCancelling(false)
+    }
+  }
+
+  async function handleDeletePaid() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/confirm/${deleteTarget._id}`, { method: "DELETE" })
+      if (res.ok) {
+        toast.success("Booking deleted")
+        setDeleteTarget(null)
+        fetchBookings()
+      } else {
+        const err = await res.json()
+        toast.error(err.error || "Failed to delete")
+      }
+    } catch {
+      toast.error("Something went wrong")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -223,6 +274,9 @@ export default function StudentDashboardPage() {
                 const isPending = booking.paymentStatus === "pending"
                 const isOverdue = booking.paymentStatus === "overdue"
                 const isPaid = booking.paymentStatus === "paid"
+                const payment = paymentMap[booking._id]
+                const hasPendingDirect = payment?.status === "pending"
+                const hasRejectedDirect = payment?.status === "rejected"
 
                 return (
                   <div key={booking._id} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
@@ -242,11 +296,28 @@ export default function StudentDashboardPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge
-                        variant={isPaid ? "success" : isOverdue ? "destructive" : "warning"}
+                        variant={isPaid ? "success" : isOverdue ? "destructive" : hasRejectedDirect ? "destructive" : hasPendingDirect ? "warning" : "warning"}
                       >
-                        {isPaid ? t("student.paid") : isOverdue ? t("student.overdue") : `${daysLeft}d left`}
+                        {isPaid ? t("student.paid") : isOverdue ? t("student.overdue") : hasPendingDirect ? "Pending" : hasRejectedDirect ? "Rejected" : `${daysLeft}d left`}
                       </Badge>
-                      {isPending && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setViewBooking(booking)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" /> View
+                      </Button>
+                      {isPaid && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                          onClick={() => setDeleteTarget(booking)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" /> Delete
+                        </Button>
+                      )}
+                      {isPending && !hasPendingDirect && !hasRejectedDirect && (
                         <>
                           <Link href={`/payment/${booking._id}`}>
                             <Button size="sm">{t("student.payCommission")}</Button>
@@ -259,6 +330,24 @@ export default function StudentDashboardPage() {
                             <X className="h-4 w-4 text-destructive" />
                           </Button>
                         </>
+                      )}
+                      {isPending && hasPendingDirect && (
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-xs text-muted-foreground">Awaiting admin verification</span>
+                          <Button size="sm" variant="outline" disabled>
+                            <Clock className="mr-1 h-3 w-3" /> Pending
+                          </Button>
+                        </div>
+                      )}
+                      {isPending && hasRejectedDirect && (
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-xs text-red-500">Payment rejected by admin</span>
+                          <Link href={`/payment/${booking._id}`}>
+                            <Button size="sm" variant="destructive">
+                              Pay Commission Again
+                            </Button>
+                          </Link>
+                        </div>
                       )}
                       {isOverdue && (
                         <Link href="/suspended">
@@ -292,6 +381,92 @@ export default function StudentDashboardPage() {
           </Button>
         </div>
       </Modal>
+
+      <Modal isOpen={!!viewBooking} onClose={() => setViewBooking(null)} title="Booking Details" className="max-w-2xl">
+        {viewBooking && (
+          <div className="space-y-4">
+            {viewBooking.roomId?.photos?.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {viewBooking.roomId.photos.map((photo, idx) => (
+                  <img
+                    key={idx}
+                    src={photo}
+                    alt={`${viewBooking.roomId.title} - ${idx + 1}`}
+                    className="h-48 w-72 shrink-0 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setSelectedImage(photo)}
+                  />
+                ))}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Room</p>
+                <p className="font-medium">{viewBooking.roomId?.title || "Unknown Room"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Monthly Rent</p>
+                <p className="font-medium">{formatPrice(viewBooking.roomId?.monthlyRent || 0)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Commission</p>
+                <p className="font-medium">{formatPrice(viewBooking.commission)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Payment Status</p>
+                <Badge
+                  variant={viewBooking.paymentStatus === "paid" ? "success" : viewBooking.paymentStatus === "overdue" ? "destructive" : "warning"}
+                >
+                  {viewBooking.paymentStatus}
+                </Badge>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Confirmed Date</p>
+                <p className="font-medium">{new Date(viewBooking.confirmedAt).toLocaleDateString()}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Commission Deadline</p>
+                <p className="font-medium">{new Date(viewBooking.commissionDeadline).toLocaleDateString()}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Days Remaining</p>
+                <p className="font-medium">{getDaysRemaining(new Date(viewBooking.commissionDeadline))} days</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Booking">
+        <p className="text-sm text-muted-foreground mb-4">
+          Are you sure you want to delete this paid booking for <strong>{deleteTarget?.roomId?.title}</strong>? This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setDeleteTarget(null)}>Keep</Button>
+          <Button variant="destructive" onClick={handleDeletePaid} loading={deleting}>
+            Delete Booking
+          </Button>
+        </div>
+      </Modal>
+
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+            onClick={() => setSelectedImage(null)}
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <img
+            src={selectedImage}
+            alt="Room"
+            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }

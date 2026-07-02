@@ -69,9 +69,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    if (confirmation.paymentStatus !== "pending") {
+    if (confirmation.paymentStatus !== "pending" && confirmation.paymentStatus !== "paid") {
       return NextResponse.json(
-        { error: "Only pending bookings can be cancelled" },
+        { error: "Only pending or paid bookings can be deleted" },
         { status: 400 }
       )
     }

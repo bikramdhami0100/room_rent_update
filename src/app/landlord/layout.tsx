@@ -16,7 +16,7 @@ const sidebarLinks = [
   { href: "/landlord/listings", label: "My Listings", icon: FileText },
   { href: "/landlord/listings/new", label: "New Listing", icon: PlusCircle },
   { href: "/landlord/documents", label: "Documents", icon: FileUp },
-  { href: "/landlord/payments", label: "Payments", icon: CreditCard },
+  { href: "/landlord/payments", label: "Payments & Earnings", icon: CreditCard },
 ]
 
 export default function LandlordLayout({ children }: { children: React.ReactNode }) {
