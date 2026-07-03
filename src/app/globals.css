@@ -49,3 +49,13 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
 }
+
+select {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+select option {
+  background: var(--color-card);
+  color: var(--color-foreground);
+}

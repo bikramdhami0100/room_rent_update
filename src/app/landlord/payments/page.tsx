@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState, useMemo, useCallback } from "react"
-import { Search, Save, Wallet, Clock, IndianRupee, Loader2 } from "lucide-react"
+import { Search, Save, Wallet, Clock, IndianRupee, Loader2, Trash2 } from "lucide-react"
 import { formatPrice, calculateLandlordShare } from "@/lib/utils"
+import { toast } from "react-toastify"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Pagination } from "@/components/ui/pagination"
@@ -77,6 +78,8 @@ export default function PaymentsPage() {
   const [payouts, setPayouts] = useState<Payout[]>([])
   const [summary, setSummary] = useState({ totalEarned: 0, totalPending: 0, totalPaid: 0 })
   const [earningsLoading, setEarningsLoading] = useState(true)
+  const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const {
     search, sort, page, limit,
@@ -195,6 +198,27 @@ export default function PaymentsPage() {
       setTimeout(() => setSaveMsg(""), 4000)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDeletePayment() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/payment/${deleteTarget._id}`, { method: "DELETE" })
+      if (res.ok) {
+        toast.success("Payment deleted")
+        setDeleteTarget(null)
+        fetchPayments()
+        fetchEarnings()
+      } else {
+        const err = await res.json().catch(() => ({ error: "Failed to delete" }))
+        toast.error(err.error)
+      }
+    } catch {
+      toast.error("Something went wrong")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -485,6 +509,7 @@ export default function PaymentsPage() {
                       <th className="cursor-pointer select-none pb-3 font-medium" onClick={() => handleSort("status")}>
                         Status <SortIcon sort={sort} column="status" />
                       </th>
+                      <th className="pb-3 font-medium w-16">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -509,6 +534,15 @@ export default function PaymentsPage() {
                           >
                             {p.status}
                           </Badge>
+                        </td>
+                        <td className="py-3">
+                          <button
+                            onClick={() => setDeleteTarget(p)}
+                            className="rounded p-1 text-muted-foreground transition-colors hover:text-destructive hover:bg-destructive/10"
+                            title="Delete payment"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -604,6 +638,34 @@ export default function PaymentsPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-lg">
+            <h3 className="text-lg font-semibold">Delete Payment</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Are you sure you want to delete the payment of <strong>{formatPrice(deleteTarget.amount)}</strong> from <strong>{deleteTarget.studentId?.name || "Unknown"}</strong>? This action cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-lg border border-input bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeletePayment}
+                disabled={deleting}
+                className="inline-flex items-center rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

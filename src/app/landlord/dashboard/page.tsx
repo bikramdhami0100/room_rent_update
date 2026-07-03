@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Home, CheckCircle, Users, PlusCircle, FileText, CreditCard, ShieldCheck, Clock, AlertTriangle } from "lucide-react"
+import { Home, CheckCircle, Users, PlusCircle, FileText, CreditCard, ShieldCheck, Clock, AlertTriangle, Trash2, Loader2 } from "lucide-react"
 import { toast } from "react-toastify"
 import { useRoleGuard } from "@/hooks/useRoleGuard"
 import { Button } from "@/components/ui/button"
@@ -32,6 +32,8 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [verification, setVerification] = useState<DocInfo | null>(null)
   const [loading, setLoading] = useState(true)
+  const [deleteTarget, setDeleteTarget] = useState<DashboardData["recentConfirmations"][number] | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     Promise.all([fetchDashboard(), fetchVerification()]).finally(() => setLoading(false))
@@ -68,6 +70,26 @@ export default function DashboardPage() {
       }
     } catch {
       // silent
+    }
+  }
+
+  async function handleDeleteConfirmation() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/confirm/${deleteTarget._id}`, { method: "DELETE" })
+      if (res.ok) {
+        toast.success("Confirmation deleted")
+        setData((prev) => prev ? { ...prev, recentConfirmations: prev.recentConfirmations.filter((c) => c._id !== deleteTarget._id) } : prev)
+        setDeleteTarget(null)
+      } else {
+        const err = await res.json().catch(() => ({ error: "Failed to delete" }))
+        toast.error(err.error)
+      }
+    } catch {
+      toast.error("Something went wrong")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -199,10 +221,17 @@ export default function DashboardPage() {
                           Student: {c.studentId?.name || "Unknown"}
                         </p>
                       </div>
-                      <div className="text-right">
+                      <div className="flex items-center gap-3">
                         <p className="text-xs text-muted-foreground">
                           {new Date(c.confirmedAt).toLocaleDateString()}
                         </p>
+                        <button
+                          onClick={() => setDeleteTarget(c)}
+                          className="rounded p-1 text-muted-foreground transition-colors hover:text-destructive hover:bg-destructive/10"
+                          title="Delete confirmation"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -213,6 +242,33 @@ export default function DashboardPage() {
         </>
       ) : (
         <p className="text-center text-muted-foreground">Failed to load dashboard data</p>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-lg">
+            <h3 className="text-lg font-semibold">Delete Confirmation</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Are you sure you want to delete the confirmation for <strong>{deleteTarget.roomId?.title || "Unknown Room"}</strong> by <strong>{deleteTarget.studentId?.name || "Unknown"}</strong>? This action cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-lg border border-input bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirmation}
+                disabled={deleting}
+                className="inline-flex items-center rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

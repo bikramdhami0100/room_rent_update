@@ -52,7 +52,7 @@ export async function DELETE(
 ) {
   try {
     const token = await getToken({ req: req as any, secret: process.env.AUTH_SECRET })
-    if (!token || token.role !== "student") {
+    if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -65,7 +65,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Confirmation not found" }, { status: 404 })
     }
 
-    if (confirmation.studentId.toString() !== token.id) {
+    const isStudent = token.role === "student" && confirmation.studentId.toString() === token.id
+    const isLandlord = token.role === "landlord" && confirmation.landlordId.toString() === token.id
+    const isAdmin = token.role === "admin"
+
+    if (!isStudent && !isLandlord && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
