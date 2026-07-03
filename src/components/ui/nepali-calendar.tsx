@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { ChevronLeft, ChevronRight, Calendar, Loader2 } from "lucide-react"
 import { adToBs, bsToAd, getNepaliMonthName, formatBsDate } from "@/lib/nepali-calendar"
 
 interface NepaliCalendarProps {
@@ -13,14 +13,41 @@ interface NepaliCalendarProps {
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-export function NepaliCalendar({ value, onChange, minDate, maxDate }: NepaliCalendarProps) {
-  const [viewBsYear, setViewBsYear] = useState<number>(2080)
-  const [viewBsMonth, setViewBsMonth] = useState<number>(1)
+function computeDays(bsYear: number, bsMonth: number): (number | null)[] {
+  const result: (number | null)[] = []
+  const firstAd = bsToAd(bsYear, bsMonth, 1)
+  if (!firstAd) return result
+  const firstDay = new Date(firstAd.year, firstAd.month - 1, firstAd.date).getDay()
+  for (let i = 0; i < firstDay; i++) result.push(null)
+  let bsDay = 1, maxIter = 32
+  while (bsDay <= maxIter) {
+    const ad = bsToAd(bsYear, bsMonth, bsDay)
+    if (!ad) break
+    result.push(bsDay)
+    bsDay++
+  }
+  return result
+}
 
-  const today = useMemo(
-    () => adToBs(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()),
-    []
-  )
+export function NepaliCalendar({ value, onChange, minDate, maxDate }: NepaliCalendarProps) {
+  const [viewBsYear, setViewBsYear] = useState<number>(() => {
+    const now = adToBs(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate())
+    return now?.year ?? 2080
+  })
+  const [viewBsMonth, setViewBsMonth] = useState<number>(() => {
+    const now = adToBs(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate())
+    return now?.month ?? 1
+  })
+  const [today, setToday] = useState<{ year: number; month: number; date: number; day: string } | null>(null)
+  const [days, setDays] = useState<(number | null)[] | null>(null)
+
+  useEffect(() => {
+    setToday(adToBs(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()))
+  }, [])
+
+  useEffect(() => {
+    setDays(computeDays(viewBsYear, viewBsMonth))
+  }, [viewBsYear, viewBsMonth])
 
   const selectedBs = useMemo(() => {
     if (!value) return today || { year: 2080, month: 1, date: 1, day: "" }
@@ -47,24 +74,6 @@ export function NepaliCalendar({ value, onChange, minDate, maxDate }: NepaliCale
     onChange?.(d, bsStr)
   }
 
-  const days = useMemo(() => {
-    const result: (number | null)[] = []
-    const firstAd = bsToAd(viewBsYear, viewBsMonth, 1)
-    if (!firstAd) return result
-    const firstDay = new Date(firstAd.year, firstAd.month - 1, firstAd.date).getDay()
-
-    for (let i = 0; i < firstDay; i++) result.push(null)
-
-    let bsDay = 1
-    while (true) {
-      const ad = bsToAd(viewBsYear, viewBsMonth, bsDay)
-      if (!ad) break
-      result.push(bsDay)
-      bsDay++
-    }
-    return result
-  }, [viewBsYear, viewBsMonth])
-
   return (
     <div className="w-full rounded-xl border bg-card shadow-sm">
       <div className="flex items-center justify-between border-b px-4 py-3">
@@ -90,7 +99,11 @@ export function NepaliCalendar({ value, onChange, minDate, maxDate }: NepaliCale
           {DAYS.map(d => (
             <div key={d} className="py-1.5 text-center text-xs font-medium text-muted-foreground">{d}</div>
           ))}
-          {days.map((day, idx) => {
+          {!days ? (
+            <div className="col-span-7 flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : days.map((day, idx) => {
             if (day === null) return <div key={`e-${idx}`} />
             const sel = selectedBs.year === viewBsYear && selectedBs.month === viewBsMonth && selectedBs.date === day
             const isToday = today?.year === viewBsYear && today?.month === viewBsMonth && today?.date === day
@@ -110,7 +123,7 @@ export function NepaliCalendar({ value, onChange, minDate, maxDate }: NepaliCale
         </div>
       </div>
 
-      {value && (
+      {value && today && (
         <div className="border-t px-4 py-2 text-center text-xs text-muted-foreground">
           Selected: {formatBsDate(selectedBs.year, selectedBs.month, selectedBs.date)} BS
           <span className="ml-1">({value.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })} AD)</span>
@@ -121,7 +134,12 @@ export function NepaliCalendar({ value, onChange, minDate, maxDate }: NepaliCale
 }
 
 export function NepaliDateDisplay({ date }: { date: Date }) {
-  const bs = useMemo(() => adToBs(date.getFullYear(), date.getMonth() + 1, date.getDate()), [date])
+  const [bs, setBs] = useState<{ year: number; month: number; date: number; day: string } | null>(null)
+
+  useEffect(() => {
+    setBs(adToBs(date.getFullYear(), date.getMonth() + 1, date.getDate()))
+  }, [date])
+
   if (!bs) return <span>{date.toLocaleDateString()}</span>
   return (
     <span className="inline-flex items-center gap-1.5">

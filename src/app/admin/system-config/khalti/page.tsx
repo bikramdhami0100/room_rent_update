@@ -109,7 +109,7 @@ export default function KhaltiConfigPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 py-10">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Khalti Configuration</h1>
           <p className="text-muted-foreground">Manage Khalti payment gateway settings</p>

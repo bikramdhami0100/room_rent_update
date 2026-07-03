@@ -29,11 +29,11 @@ export function Pagination({ page, totalPages, total, onPageChange }: Pagination
   }
 
   return (
-    <div className="flex items-center justify-between gap-4 pt-4">
+    <div className="flex flex-wrap items-center justify-between gap-2 pt-4">
       <p className="text-sm text-muted-foreground">
         {total} result{total !== 1 ? "s" : ""}
       </p>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap">
         <Button
           variant="outline"
           size="sm"

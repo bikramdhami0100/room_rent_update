@@ -11,7 +11,7 @@ export interface IRentPaymentDocument extends Document {
   year: number
   status: RentPayStatus
   paidAt?: Date
-  method: "khalti" | "esewa" | "qrcode" | "bank" | "cash"
+  method: "khalti" | "esewa" | "qrcode" | "bank" | "cash" | "direct"
   transactionId?: string
   screenshotUrl?: string
   notes?: string
@@ -28,13 +28,13 @@ const RentPaymentSchema = new Schema<IRentPaymentDocument>(
     year: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["paid", "unpaid", "partial"],
-      default: "paid",
+      enum: ["paid", "unpaid", "partial", "pending", "approved", "rejected"],
+      default: "pending",
     },
     paidAt: { type: Date },
     method: {
       type: String,
-      enum: ["khalti", "esewa", "qrcode", "bank", "cash"],
+      enum: ["khalti", "esewa", "qrcode", "bank", "cash", "direct"],
       default: "cash",
     },
     transactionId: { type: String },

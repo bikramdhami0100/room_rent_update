@@ -359,20 +359,15 @@ export default function AdminStudentsPage() {
         </Card>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-lg border">
+          {/* Desktop table */}
+          <div className="hidden overflow-x-auto rounded-lg border md:block">
             <table className="w-full text-sm">
               <thead className="bg-secondary">
                 <tr>
-                  <th
-                    className="cursor-pointer select-none px-4 py-3 text-left font-medium"
-                    onClick={() => handleSort("name")}
-                  >
+                  <th className="cursor-pointer select-none px-4 py-3 text-left font-medium" onClick={() => handleSort("name")}>
                     Name <SortIcon column="name" />
                   </th>
-                  <th
-                    className="cursor-pointer select-none px-4 py-3 text-left font-medium"
-                    onClick={() => handleSort("email")}
-                  >
+                  <th className="cursor-pointer select-none px-4 py-3 text-left font-medium" onClick={() => handleSort("email")}>
                     Email <SortIcon column="email" />
                   </th>
                   <th className="px-4 py-3 text-left font-medium">Phone</th>
@@ -389,41 +384,21 @@ export default function AdminStudentsPage() {
                     <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
                     <td className="px-4 py-3 text-muted-foreground">{u.phone || "N/A"}</td>
                     <td className="px-4 py-3">
-                      <Badge variant={roleBadgeVariant(u.role)}>
-                        {u.role}
-                      </Badge>
+                      <Badge variant={roleBadgeVariant(u.role)}>{u.role}</Badge>
+                    </td>
+                    <td className="px-4 py-3">{u.commissionDue ? formatPrice(u.commissionDue) : "N/A"}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant={u.isSuspended ? "destructive" : "success"}>{u.isSuspended ? "Suspended" : "Active"}</Badge>
                     </td>
                     <td className="px-4 py-3">
-                      {u.commissionDue ? formatPrice(u.commissionDue) : "N/A"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={u.isSuspended ? "destructive" : "success"}>
-                        {u.isSuspended ? "Suspended" : "Active"}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditModal(u)}
-                        >
+                      <div className="flex gap-1 flex-wrap">
+                        <Button size="sm" variant="outline" onClick={() => openEditModal(u)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant={u.isSuspended ? "default" : "destructive"}
-                          onClick={() => setConfirmSuspendId(u._id)}
-                          loading={acting === u._id}
-                        >
+                        <Button size="sm" variant={u.isSuspended ? "default" : "destructive"} onClick={() => setConfirmSuspendId(u._id)} loading={acting === u._id}>
                           {u.isSuspended ? "Unsuspend" : "Suspend"}
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setDeleteTarget(u)}
-                          disabled={u.role === "admin"}
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(u)} disabled={u.role === "admin"}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -432,6 +407,41 @@ export default function AdminStudentsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {users.map((u) => (
+              <Card key={u._id}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{u.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Badge variant={roleBadgeVariant(u.role)}>{u.role}</Badge>
+                      <Badge variant={u.isSuspended ? "destructive" : "success"}>{u.isSuspended ? "Suspended" : "Active"}</Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm flex-wrap">
+                    <span>{u.phone || "N/A"}</span>
+                    <span className="text-muted-foreground">Commission: {u.commissionDue ? formatPrice(u.commissionDue) : "N/A"}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button size="sm" variant="outline" onClick={() => openEditModal(u)}>
+                      <Pencil className="h-3.5 w-3.5 mr-1" />Edit
+                    </Button>
+                    <Button size="sm" variant={u.isSuspended ? "default" : "destructive"} onClick={() => setConfirmSuspendId(u._id)} loading={acting === u._id}>
+                      {u.isSuspended ? "Unsuspend" : "Suspend"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(u)} disabled={u.role === "admin"}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           <Pagination />

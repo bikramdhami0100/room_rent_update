@@ -26,6 +26,25 @@ export async function GET(req: NextRequest) {
   }
 }
 
+export async function DELETE(req: NextRequest) {
+  try {
+    const token = await getToken({ req: req as any, secret: process.env.AUTH_SECRET })
+    if (!token || token.role !== "landlord") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get("id")
+    if (!id) return NextResponse.json({ error: "id required" }, { status: 400 })
+
+    await connectDB()
+    await LandlordDocument.findOneAndDelete({ _id: id, userId: token.id })
+    return NextResponse.json({ success: true })
+  } catch {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const token = await getToken({ req: req as any, secret: process.env.AUTH_SECRET })
@@ -46,11 +65,21 @@ export async function POST(req: NextRequest) {
 
     await connectDB()
 
-    await LandlordDocument.findOneAndUpdate(
-      { userId: token.id, documentType },
-      { userId: token.id, documentType, documentUrl, status: "pending", submittedAt: null },
-      { upsert: true, new: true }
-    )
+    if (documentType === "house_photos") {
+      await LandlordDocument.create({
+        userId: token.id,
+        documentType: "house_photos",
+        documentUrl,
+        status: "pending",
+        submittedAt: null,
+      })
+    } else {
+      await LandlordDocument.findOneAndUpdate(
+        { userId: token.id, documentType },
+        { userId: token.id, documentType, documentUrl, status: "pending", submittedAt: null },
+        { upsert: true, new: true }
+      )
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

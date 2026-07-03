@@ -2,7 +2,7 @@ export type UserRole = "student" | "landlord" | "admin"
 
 export type RentalStatus = "active" | "terminated" | "completed"
 
-export type RentPayStatus = "paid" | "unpaid" | "partial"
+export type RentPayStatus = "paid" | "unpaid" | "partial" | "pending" | "approved" | "rejected"
 
 export type DocumentType =
   | "citizenship"

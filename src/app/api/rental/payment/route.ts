@@ -41,15 +41,15 @@ export async function POST(req: NextRequest) {
       amount,
       month,
       year,
-      status: "paid",
-      paidAt: new Date(),
+      status: "pending",
       method: method || "cash",
       transactionId,
       screenshotUrl,
     })
 
     return NextResponse.json({ success: true, payment })
-  } catch {
+  } catch (error) {
+    console.error("Error creating payment:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

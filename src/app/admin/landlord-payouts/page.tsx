@@ -280,7 +280,7 @@ export default function AdminLandlordPayoutsPage() {
           </div>
 
           {/* Sort bar */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground px-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground px-1">
             <Filter className="h-3 w-3" />
             <span>Sort by:</span>
             <button onClick={() => toggleSort("name")} className="inline-flex items-center gap-1 hover:text-foreground">
@@ -370,7 +370,7 @@ export default function AdminLandlordPayoutsPage() {
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2 shrink-0 mt-1">
+                      <div className="flex flex-wrap gap-2 shrink-0 mt-1">
                         <Button
                           size="sm"
                           variant="outline"

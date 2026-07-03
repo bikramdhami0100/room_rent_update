@@ -441,27 +441,19 @@ export default function AdminListingsPage() {
         </Card>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-lg border">
+          {/* Desktop table */}
+          <div className="hidden overflow-x-auto rounded-lg border md:block">
             <table className="w-full text-sm">
               <thead className="bg-secondary">
                 <tr>
-                  <th
-                    className="cursor-pointer select-none px-4 py-3 text-left font-medium"
-                    onClick={() => handleSort("title")}
-                  >
+                  <th className="cursor-pointer select-none px-4 py-3 text-left font-medium" onClick={() => handleSort("title")}>
                     Title <SortIcon column="title" />
                   </th>
                   <th className="px-4 py-3 text-left font-medium">Landlord</th>
-                  <th
-                    className="cursor-pointer select-none px-4 py-3 text-left font-medium"
-                    onClick={() => handleSort("monthlyRent")}
-                  >
+                  <th className="cursor-pointer select-none px-4 py-3 text-left font-medium" onClick={() => handleSort("monthlyRent")}>
                     Rent <SortIcon column="monthlyRent" />
                   </th>
-                  <th
-                    className="cursor-pointer select-none px-4 py-3 text-left font-medium"
-                    onClick={() => handleSort("location")}
-                  >
+                  <th className="cursor-pointer select-none px-4 py-3 text-left font-medium" onClick={() => handleSort("location")}>
                     Location <SortIcon column="location" />
                   </th>
                   <th className="px-4 py-3 text-left font-medium">Status</th>
@@ -472,53 +464,28 @@ export default function AdminListingsPage() {
                 {listings.map((l) => (
                   <tr key={l._id} className="hover:bg-secondary/50">
                     <td className="px-4 py-3 font-medium">{l.title}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {l.landlordId?.name || "Unknown"}
-                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{l.landlordId?.name || "Unknown"}</td>
                     <td className="px-4 py-3">{formatPrice(l.monthlyRent)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{l.location}</td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-1">
-                        <Badge variant={l.isApproved ? "success" : "warning"}>
-                          {l.isApproved ? "Approved" : "Pending"}
-                        </Badge>
-                        <Badge variant={l.isActive ? "default" : "secondary"}>
-                          {l.isActive ? "Active" : "Inactive"}
-                        </Badge>
+                      <div className="flex gap-1 flex-wrap">
+                        <Badge variant={l.isApproved ? "success" : "warning"}>{l.isApproved ? "Approved" : "Pending"}</Badge>
+                        <Badge variant={l.isActive ? "default" : "secondary"}>{l.isActive ? "Active" : "Inactive"}</Badge>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 flex-wrap">
                         {!l.isApproved && (
-                          <Button size="sm" onClick={() => handleAction(l._id, "approve")} loading={acting === l._id}>
-                            Approve
-                          </Button>
+                          <Button size="sm" onClick={() => handleAction(l._id, "approve")} loading={acting === l._id}>Approve</Button>
                         )}
                         {l.isApproved && (
-                          <Button size="sm" variant="destructive" onClick={() => handleAction(l._id, "reject")} loading={acting === l._id}>
-                            Reject
-                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => handleAction(l._id, "reject")} loading={acting === l._id}>Reject</Button>
                         )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleAction(l._id, l.isActive ? "deactivate" : "activate")}
-                          loading={acting === l._id}
-                        >
-                          {l.isActive ? "Deactivate" : "Activate"}
+                        <Button size="sm" variant="outline" onClick={() => handleAction(l._id, l.isActive ? "deactivate" : "activate")} loading={acting === l._id}>
+                          {l.isActive ? "Deact." : "Act."}
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditModal(l)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setDeleteTarget(l)}
-                        >
+                        <Button size="sm" variant="outline" onClick={() => openEditModal(l)}>Edit</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(l)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -527,6 +494,45 @@ export default function AdminListingsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {listings.map((l) => (
+              <Card key={l._id}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{l.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{l.landlordId?.name || "Unknown"}</p>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Badge variant={l.isApproved ? "success" : "warning"}>{l.isApproved ? "Approved" : "Pending"}</Badge>
+                      <Badge variant={l.isActive ? "default" : "secondary"}>{l.isActive ? "Active" : "Inactive"}</Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="font-semibold">{formatPrice(l.monthlyRent)}</span>
+                    <span className="text-muted-foreground">{l.location}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {!l.isApproved && (
+                      <Button size="sm" onClick={() => handleAction(l._id, "approve")} loading={acting === l._id}>Approve</Button>
+                    )}
+                    {l.isApproved && (
+                      <Button size="sm" variant="destructive" onClick={() => handleAction(l._id, "reject")} loading={acting === l._id}>Reject</Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => handleAction(l._id, l.isActive ? "deactivate" : "activate")} loading={acting === l._id}>
+                      {l.isActive ? "Deact." : "Act."}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openEditModal(l)}>Edit</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(l)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           <Pagination />

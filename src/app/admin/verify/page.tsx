@@ -169,21 +169,22 @@ export default function VerifyPage() {
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Identity Documents</h3>
                   <div className="grid gap-2">
                     {identityDocs.map((doc, i) => (
-                      <div key={i} className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg">{DOC_CATEGORIES[doc.documentType]?.icon || "📄"}</span>
-                          <span className="font-medium">{DOC_CATEGORIES[doc.documentType]?.label || doc.documentType.replace(/_/g, " ")}</span>
+                      <div key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <span className="text-lg shrink-0">{DOC_CATEGORIES[doc.documentType]?.icon || "📄"}</span>
+                          <span className="font-medium text-sm truncate">{DOC_CATEGORIES[doc.documentType]?.label || doc.documentType.replace(/_/g, " ")}</span>
                           <Badge
                             variant={
                               doc.status === "approved" ? "success"
                               : doc.status === "rejected" ? "destructive"
                               : "warning"
                             }
+                            className="shrink-0"
                           >
                             {doc.status}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {doc.documentUrl && (
                             <>
                               {isImageFile(doc.documentUrl) ? (
@@ -260,21 +261,22 @@ export default function VerifyPage() {
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Address Proof</h3>
                   <div className="grid gap-2">
                     {addressDocs.map((doc, i) => (
-                      <div key={i} className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg">📍</span>
-                          <span className="font-medium">Address Document</span>
+                      <div key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <span className="text-lg shrink-0">📍</span>
+                          <span className="font-medium text-sm">Address Document</span>
                           <Badge
                             variant={
                               doc.status === "approved" ? "success"
                               : doc.status === "rejected" ? "destructive"
                               : "warning"
                             }
+                            className="shrink-0"
                           >
                             {doc.status}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {doc.documentUrl && (
                             <>
                               {isImageFile(doc.documentUrl) ? (

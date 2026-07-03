@@ -111,7 +111,7 @@ export default function ReportsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 py-10">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Reports</h1>
           <p className="text-muted-foreground">Platform analytics and statistics</p>
@@ -122,7 +122,7 @@ export default function ReportsPage() {
         </Button>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {rangeFilters.map((f) => (
           <Button
             key={f.value}

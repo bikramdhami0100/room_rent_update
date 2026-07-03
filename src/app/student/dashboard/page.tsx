@@ -55,6 +55,7 @@ export default function StudentDashboardPage() {
   const [cancelling, setCancelling] = useState(false)
   const [viewBooking, setViewBooking] = useState<Booking | null>(null)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0)
   const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [paymentMap, setPaymentMap] = useState<Record<string, PaymentInfo>>({})
@@ -389,20 +390,42 @@ export default function StudentDashboardPage() {
         </div>
       </Modal>
 
-      <Modal isOpen={!!viewBooking} onClose={() => setViewBooking(null)} title="Booking Details" className="max-w-2xl">
+      <Modal isOpen={!!viewBooking} onClose={() => { setViewBooking(null); setActivePhotoIdx(0) }} title="Booking Details" className="max-w-2xl">
         {viewBooking && (
           <div className="space-y-4">
             {viewBooking.roomId?.photos?.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {viewBooking.roomId.photos.map((photo, idx) => (
+              <div className="space-y-3">
+                <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
                   <img
-                    key={idx}
-                    src={photo}
-                    alt={`${viewBooking.roomId.title} - ${idx + 1}`}
-                    className="h-48 w-72 shrink-0 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setSelectedImage(photo)}
+                    src={viewBooking.roomId.photos[activePhotoIdx]}
+                    alt={`${viewBooking.roomId.title} - ${activePhotoIdx + 1}`}
+                    className="h-full w-full object-cover cursor-pointer"
+                    onClick={() => setSelectedImage(viewBooking.roomId.photos[activePhotoIdx])}
                   />
-                ))}
+                  {viewBooking.roomId.photos.length > 1 && (
+                    <div className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2.5 py-0.5 text-xs text-white">
+                      {activePhotoIdx + 1} / {viewBooking.roomId.photos.length}
+                    </div>
+                  )}
+                </div>
+                {viewBooking.roomId.photos.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {viewBooking.roomId.photos.map((photo, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setActivePhotoIdx(idx)}
+                        className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
+                          idx === activePhotoIdx
+                            ? "border-primary ring-1 ring-primary"
+                            : "border-transparent opacity-70 hover:opacity-100"
+                        }`}
+                      >
+                        <img src={photo} alt="" className="h-full w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <div className="grid grid-cols-2 gap-4 text-sm">
