@@ -55,7 +55,7 @@ export default function LandlordRentalsPage() {
     setLoading(true)
     try {
       const [cr, pr] = await Promise.all([
-        fetch("/api/rental/contract"),
+        fetch("/api/rental/contract?limit=100"),
         fetch("/api/landlord/rental-payments"),
       ])
       if (cr.ok) setContracts((await cr.json()).contracts || [])

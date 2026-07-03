@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     const contracts = await RentalContract.find(contractFilter).populate("roomId").lean()
     const payments = await RentPayment.find({ studentId: token.id })
-      .populate("roomId contractId")
+      .populate("roomId")
       .sort({ year: -1, month: -1 })
       .lean()
 

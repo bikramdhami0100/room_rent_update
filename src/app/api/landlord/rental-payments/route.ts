@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     if (year) filter.year = parseInt(year)
 
     const payments = await RentPayment.find(filter)
-      .populate("studentId roomId contractId")
+      .populate("studentId")
       .sort({ year: -1, month: -1 })
       .lean()
 
