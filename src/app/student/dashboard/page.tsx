@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import {
   Home, CheckCircle, Clock, AlertTriangle, Search, X, Eye, Trash2,
-  ArrowUpDown, ArrowUp, ArrowDown, Loader2,
+  ArrowUpDown, ArrowUp, ArrowDown, Loader2, Building2,
 } from "lucide-react"
 import { formatPrice, getDaysRemaining } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -201,9 +201,16 @@ export default function StudentDashboardPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>{t("nav.dashboard")}</CardTitle>
-          <CardDescription>Your room booking history</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>{t("nav.dashboard")}</CardTitle>
+            <CardDescription>Your room booking history</CardDescription>
+          </div>
+          <Link href="/student/rentals">
+            <Button variant="outline" size="sm">
+              <Building2 className="mr-1 h-4 w-4" /> My Rentals
+            </Button>
+          </Link>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

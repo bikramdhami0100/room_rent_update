@@ -12,6 +12,8 @@ export interface IUserDocument extends Document {
   isSuspended: boolean
   suspensionReason?: string
   commissionDue?: number
+  isHouseOwner?: boolean
+  citizenshipNumber?: string
   resetToken?: string
   resetTokenExpiry?: Date
   // Landlord payout details
@@ -39,6 +41,8 @@ const UserSchema = new Schema<IUserDocument>(
     isSuspended: { type: Boolean, default: false },
     suspensionReason: { type: String },
     commissionDue: { type: Number, default: 0 },
+    isHouseOwner: { type: Boolean, default: false },
+    citizenshipNumber: { type: String },
     resetToken: { type: String },
     resetTokenExpiry: { type: Date },
     // Landlord payout details

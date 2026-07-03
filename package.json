@@ -11,6 +11,7 @@
   "dependencies": {
     "@auth/mongodb-adapter": "^3.7.4",
     "@hookform/resolvers": "^3.9.1",
+    "@remotemerge/nepali-date-converter": "^1.2.0",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "leaflet": "^1.9.4",

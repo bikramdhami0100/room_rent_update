@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Home, CheckCircle, Users, PlusCircle, FileText, CreditCard, ShieldCheck, Clock, AlertTriangle, Trash2, Loader2 } from "lucide-react"
+import { Home, CheckCircle, Users, PlusCircle, FileText, CreditCard, ShieldCheck, Clock, AlertTriangle, Trash2, Loader2, Building2 } from "lucide-react"
 import { toast } from "react-toastify"
 import { useRoleGuard } from "@/hooks/useRoleGuard"
 import { Button } from "@/components/ui/button"
@@ -111,6 +111,7 @@ export default function DashboardPage() {
     { label: "New Listing", href: "/landlord/listings/new", icon: PlusCircle },
     { label: "My Listings", href: "/landlord/listings", icon: FileText },
     { label: "Payments", href: "/landlord/payments", icon: CreditCard },
+    { label: "Rentals", href: "/landlord/rentals", icon: Building2 },
   ]
 
   return (

@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  LayoutDashboard, FileText, PlusCircle, FileUp, CreditCard,
+  LayoutDashboard, FileText, PlusCircle, FileUp, CreditCard, Users,
   Menu, X, ChevronLeft,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -17,6 +17,7 @@ const sidebarLinks = [
   { href: "/landlord/listings/new", label: "New Listing", icon: PlusCircle },
   { href: "/landlord/documents", label: "Documents", icon: FileUp },
   { href: "/landlord/payments", label: "Payments & Earnings", icon: CreditCard },
+  { href: "/landlord/rentals", label: "Rentals", icon: Users },
 ]
 
 export default function LandlordLayout({ children }: { children: React.ReactNode }) {

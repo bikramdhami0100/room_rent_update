@@ -1,5 +1,9 @@
 export type UserRole = "student" | "landlord" | "admin"
 
+export type RentalStatus = "active" | "terminated" | "completed"
+
+export type RentPayStatus = "paid" | "unpaid" | "partial"
+
 export type DocumentType =
   | "citizenship"
   | "passport"
@@ -39,6 +43,8 @@ export interface IUser {
   isSuspended: boolean
   suspensionReason?: string
   commissionDue?: number
+  isHouseOwner?: boolean
+  citizenshipNumber?: string
   resetToken?: string
   resetTokenExpiry?: Date
   // Landlord payout details
@@ -221,4 +227,38 @@ export interface IPaymentResponseLog {
   userId?: string
   isSuccess: boolean
   createdAt: Date
+}
+
+export interface IRentalContract {
+  _id: string
+  studentId: string | IUser
+  roomId: string | IRoom
+  landlordId: string | IUser
+  startDate: Date
+  endDate?: Date
+  monthlyRent: number
+  status: RentalStatus
+  terminationDate?: Date
+  perDayRate?: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface IRentPayment {
+  _id: string
+  contractId: string | IRentalContract
+  studentId: string | IUser
+  roomId: string | IRoom
+  landlordId: string | IUser
+  amount: number
+  month: number
+  year: number
+  status: RentPayStatus
+  paidAt?: Date
+  method: "khalti" | "esewa" | "qrcode" | "bank" | "cash"
+  transactionId?: string
+  screenshotUrl?: string
+  notes?: string
+  createdAt: Date
+  updatedAt: Date
 }
