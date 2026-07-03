@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "react-toastify"
-import { Home } from "lucide-react"
+import { Home, Upload, X } from "lucide-react"
 import { roomSchema, type RoomInput } from "@/lib/validations"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +22,9 @@ export default function EditListingPage() {
   const [pageLoading, setPageLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [existingPhotos, setExistingPhotos] = useState<string[]>([])
+  const [newPhotos, setNewPhotos] = useState<File[]>([])
+  const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
@@ -70,10 +73,20 @@ export default function EditListingPage() {
   async function onSubmit(data: RoomInput) {
     setSaving(true)
     try {
+      let allPhotos = [...existingPhotos]
+      if (newPhotos.length > 0) {
+        for (const file of newPhotos) {
+          const formData = new FormData()
+          formData.append("file", file)
+          const uploadRes = await fetch("/api/upload", { method: "POST", body: formData })
+          const { url } = await uploadRes.json()
+          allPhotos.push(url)
+        }
+      }
       const res = await fetch("/api/landlord/listings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, ...data, photos: existingPhotos }),
+        body: JSON.stringify({ id, ...data, photos: allPhotos }),
       })
 
       if (!res.ok) {
@@ -233,6 +246,71 @@ export default function EditListingPage() {
               error={errors.facilities?.message}
               {...register("facilities")}
             />
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Photos</label>
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setDragOver(false)
+                  const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"))
+                  setNewPhotos((prev) => [...prev, ...files])
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-colors ${
+                  dragOver
+                    ? "border-primary bg-primary/5"
+                    : "border-muted-foreground/30 hover:border-muted-foreground/50 hover:bg-muted/30"
+                }`}
+              >
+                <div className="mb-3 rounded-full bg-primary/10 p-3">
+                  <Upload className="h-6 w-6 text-primary" />
+                </div>
+                <p className="text-sm font-medium">Click to upload or drag and drop</p>
+                <p className="mt-1 text-xs text-muted-foreground">PNG, JPG, WebP up to 5MB each</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || [])
+                    setNewPhotos((prev) => [...prev, ...files])
+                    e.target.value = ""
+                  }}
+                />
+              </div>
+              {(existingPhotos.length > 0 || newPhotos.length > 0) && (
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {existingPhotos.map((url, i) => (
+                    <div key={`existing-${i}`} className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                      <img src={url} alt="" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setExistingPhotos((prev) => prev.filter((_, j) => j !== i))}
+                        className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {newPhotos.map((file, i) => (
+                    <div key={`new-${i}`} className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                      <img src={URL.createObjectURL(file)} alt={file.name} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setNewPhotos((prev) => prev.filter((_, j) => j !== i))}
+                        className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <Button type="submit" className="w-full" loading={saving}>
               <Home className="mr-2 h-4 w-4" />
               Update Listing

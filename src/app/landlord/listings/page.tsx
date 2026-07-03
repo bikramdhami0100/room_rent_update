@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus, MapPin, Loader2, Pencil, Trash2, Megaphone, Home } from "lucide-react"
+import { Plus, MapPin, Loader2, Pencil, Trash2, Megaphone, Home, Upload, X } from "lucide-react"
 import { toast } from "react-toastify"
 import { formatPrice } from "@/lib/utils"
 import { roomSchema, type RoomInput } from "@/lib/validations"
@@ -40,7 +40,9 @@ export default function MyListingsPage() {
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<RoomFormState | null>(null)
   const [saving, setSaving] = useState(false)
-  const [newPhotos, setNewPhotos] = useState<FileList | null>(null)
+  const [newPhotos, setNewPhotos] = useState<File[]>([])
+  const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [deleteTarget, setDeleteTarget] = useState<IRoom | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -70,14 +72,14 @@ export default function MyListingsPage() {
 
   function openAdd() {
     setEditing(null)
-    setNewPhotos(null)
+    setNewPhotos([])
     reset(EMPTY_FORM)
     setShowModal(true)
   }
 
   function openEdit(listing: IRoom) {
     setEditing({ listing, photos: listing.photos || [] })
-    setNewPhotos(null)
+    setNewPhotos([])
     reset({
       title: listing.title,
       description: listing.description,
@@ -99,8 +101,8 @@ export default function MyListingsPage() {
     try {
       let photoUrls = editing?.photos || []
 
-      if (newPhotos && newPhotos.length > 0) {
-        for (const file of Array.from(newPhotos)) {
+      if (newPhotos.length > 0) {
+        for (const file of newPhotos) {
           const formData = new FormData()
           formData.append("file", file)
           const uploadRes = await fetch("/api/upload", { method: "POST", body: formData })
@@ -266,10 +268,73 @@ export default function MyListingsPage() {
             {errors.roomType && <p className="text-sm text-destructive">{errors.roomType.message}</p>}
           </div>
           <Input label="Capacity" type="number" placeholder="1" error={errors.capacity?.message} {...register("capacity")} />
-          <div className="space-y-1">
+          <div className="space-y-3">
             <label className="text-sm font-medium">Photos {isEdit ? "(add more)" : ""}</label>
-            <input type="file" multiple accept="image/*" className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium" onChange={(e) => setNewPhotos(e.target.files)} />
-            {isEdit && editing?.photos.length ? <p className="text-xs text-muted-foreground">{editing.photos.length} existing photo(s)</p> : null}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault()
+                setDragOver(false)
+                const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"))
+                setNewPhotos((prev) => [...prev, ...files])
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              className={`relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 transition-colors ${
+                dragOver
+                  ? "border-primary bg-primary/5"
+                  : "border-muted-foreground/30 hover:border-muted-foreground/50 hover:bg-muted/30"
+              }`}
+            >
+              <div className="mb-2 rounded-full bg-primary/10 p-2.5">
+                <Upload className="h-5 w-5 text-primary" />
+              </div>
+              <p className="text-sm font-medium">Click to upload or drag and drop</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">PNG, JPG, WebP</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || [])
+                  setNewPhotos((prev) => [...prev, ...files])
+                  e.target.value = ""
+                }}
+              />
+            </div>
+            {(isEdit && editing?.photos.length > 0) || newPhotos.length > 0 ? (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {isEdit && editing?.photos.map((url, i) => (
+                  <div key={`existing-${i}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = editing.photos.filter((_, j) => j !== i)
+                        setEditing({ ...editing, photos: updated })
+                      }}
+                      className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                {newPhotos.map((file, i) => (
+                  <div key={`new-${i}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                    <img src={URL.createObjectURL(file)} alt={file.name} className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setNewPhotos((prev) => prev.filter((_, j) => j !== i))}
+                      className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>

@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import {
   MapPin, Loader2, Search, ArrowUpDown, ArrowUp, ArrowDown,
-  Trash2, FileSpreadsheet, ChevronLeft, ChevronRight, Plus, X,
+  Trash2, FileSpreadsheet, ChevronLeft, ChevronRight, Plus, X, Upload,
 } from "lucide-react"
 import * as XLSX from "xlsx"
 import { formatPrice } from "@/lib/utils"
@@ -87,8 +87,10 @@ export default function AdminListingsPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [form, setForm] = useState(INITIAL_FORM)
   const [saving, setSaving] = useState(false)
-  const [newPhotos, setNewPhotos] = useState<FileList | null>(null)
+  const [newPhotos, setNewPhotos] = useState<File[]>([])
   const [existingPhotos, setExistingPhotos] = useState<string[]>([])
+  const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [landlords, setLandlords] = useState<Landlord[]>([])
   const [loadingLandlords, setLoadingLandlords] = useState(false)
 
@@ -221,7 +223,7 @@ export default function AdminListingsPage() {
   function openAddModal() {
     setEditingListing(null)
     setForm(INITIAL_FORM)
-    setNewPhotos(null)
+    setNewPhotos([])
     setExistingPhotos([])
     fetchLandlords()
     setShowAddModal(true)
@@ -245,7 +247,7 @@ export default function AdminListingsPage() {
       isActive: listing.isActive,
       isApproved: listing.isApproved,
     })
-    setNewPhotos(null)
+    setNewPhotos([])
     setExistingPhotos(listing.photos || [])
     fetchLandlords()
     setShowAddModal(true)
@@ -271,8 +273,8 @@ export default function AdminListingsPage() {
     try {
       let photoUrls = [...existingPhotos]
 
-      if (newPhotos && newPhotos.length > 0) {
-        for (const file of Array.from(newPhotos)) {
+      if (newPhotos.length > 0) {
+        for (const file of newPhotos) {
           const formData = new FormData()
           formData.append("file", file)
           const uploadRes = await fetch("/api/upload", { method: "POST", body: formData })
@@ -653,18 +655,70 @@ export default function AdminListingsPage() {
             )}
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-3">
             <label className="text-sm font-medium">Photos {editingListing ? "(add more)" : ""}</label>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
-              onChange={(e) => setNewPhotos(e.target.files)}
-            />
-            {editingListing && existingPhotos.length > 0 && (
-              <p className="text-xs text-muted-foreground">{existingPhotos.length} existing photo(s)</p>
-            )}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault()
+                setDragOver(false)
+                const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"))
+                setNewPhotos((prev) => [...prev, ...files])
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              className={`relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 transition-colors ${
+                dragOver
+                  ? "border-primary bg-primary/5"
+                  : "border-muted-foreground/30 hover:border-muted-foreground/50 hover:bg-muted/30"
+              }`}
+            >
+              <div className="mb-2 rounded-full bg-primary/10 p-2.5">
+                <Upload className="h-5 w-5 text-primary" />
+              </div>
+              <p className="text-sm font-medium">Click to upload or drag and drop</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">PNG, JPG, WebP</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || [])
+                  setNewPhotos((prev) => [...prev, ...files])
+                  e.target.value = ""
+                }}
+              />
+            </div>
+            {(editingListing && existingPhotos.length > 0) || newPhotos.length > 0 ? (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {editingListing && existingPhotos.map((url, i) => (
+                  <div key={`existing-${i}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setExistingPhotos((prev) => prev.filter((_, j) => j !== i))}
+                      className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                {newPhotos.map((file, i) => (
+                  <div key={`new-${i}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                    <img src={URL.createObjectURL(file)} alt={file.name} className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setNewPhotos((prev) => prev.filter((_, j) => j !== i))}
+                      className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-4">

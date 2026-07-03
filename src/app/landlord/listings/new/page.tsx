@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "react-toastify"
-import { Megaphone } from "lucide-react"
+import { Megaphone, Upload, X, ImageIcon } from "lucide-react"
 import { roomSchema, type RoomInput } from "@/lib/validations"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,7 +15,9 @@ import { LocationPicker } from "@/components/ui/location-picker"
 export default function NewListingPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [photos, setPhotos] = useState<FileList | null>(null)
+  const [photos, setPhotos] = useState<File[]>([])
+  const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
@@ -35,8 +37,8 @@ export default function NewListingPage() {
     try {
       let photoUrls: string[] = []
 
-      if (photos && photos.length > 0) {
-        for (const file of Array.from(photos)) {
+      if (photos.length > 0) {
+        for (const file of photos) {
           const formData = new FormData()
           formData.append("file", file)
           const uploadRes = await fetch("/api/upload", { method: "POST", body: formData })
@@ -189,15 +191,62 @@ export default function NewListingPage() {
               error={errors.capacity?.message}
               {...register("capacity")}
             />
-            <div className="space-y-1">
+            <div className="space-y-3">
               <label className="text-sm font-medium">Photos</label>
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
-                onChange={(e) => setPhotos(e.target.files)}
-              />
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setDragOver(false)
+                  const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"))
+                  setPhotos((prev) => [...prev, ...files])
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-colors ${
+                  dragOver
+                    ? "border-primary bg-primary/5"
+                    : "border-muted-foreground/30 hover:border-muted-foreground/50 hover:bg-muted/30"
+                }`}
+              >
+                <div className="mb-3 rounded-full bg-primary/10 p-3">
+                  <Upload className="h-6 w-6 text-primary" />
+                </div>
+                <p className="text-sm font-medium">Click to upload or drag and drop</p>
+                <p className="mt-1 text-xs text-muted-foreground">PNG, JPG, WebP up to 5MB each</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || [])
+                    setPhotos((prev) => [...prev, ...files])
+                    e.target.value = ""
+                  }}
+                />
+              </div>
+              {photos.length > 0 && (
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {photos.map((file, i) => (
+                    <div key={`${file.name}-${i}`} className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
+                        className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <Button type="submit" className="w-full" loading={loading}>
               <Megaphone className="mr-2 h-4 w-4" />
